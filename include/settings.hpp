@@ -1,10 +1,11 @@
-#include <tinyxml2.h>
-
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <map>
 #include <stdexcept>
+#include <vector>
+
+#include "../src/tinyxml2/tinyxml2.h"
 
 
 namespace util {
@@ -37,12 +38,18 @@ class Settings {
 
   // save a variable into xml
   template <class T, size_t N = 1>
-  void put(T& value, const std::string& name) {
+  void put(T& value, const std::string& name, bool ignore_read_error = false) {
+    if (name.find(' ') != std::string::npos) {
+      assert(
+          "Please dont use the space character for the name "
+          "of your variable. TinyXml2 doesnt like that." &&
+          false);
+    }
+
     DatamapIt settings_data_it = data.find(name);
     assert(
         "Settings::put: Each member variable must be named uniquely (second "
-        "parameter)! Only put "
-        "each variable once!" &&
+        "parameter)! Only put each variable once!" &&
         settings_data_it == data.end());
 
     // <TYPE_SUPPORT> Use is_same to test if your new type is given.
@@ -66,7 +73,7 @@ class Settings {
 
     const auto res = data.insert(std::make_pair(name, d));
 
-    if (!loadIf(name)) {
+    if (!loadIf(name, ignore_read_error)) {
       save(nullptr, res.first);
     }
   }
@@ -89,18 +96,31 @@ class Settings {
     }
     */
 
+    std::vector<std::string> bad_variables;
     for (DatamapIt it = data.begin(); it != data.end(); it++) {
       XMLElement* element = settings->FirstChildElement(it->first.c_str());
 
       assert(("Settings::loadAll: Did not found requested " + it->first).c_str() &&
              element != nullptr);
 
-      load(element, it);
+      const XMLError error = load(element, it);
+      if (error != XMLError::XML_SUCCESS) {
+        bad_variables.push_back(it->first);
+      }
+    }
+    if (bad_variables.size() > 0) {
+      std::string bad = "";
+      for (const auto& str : bad_variables) {
+        bad += "\n" + str;
+      }
+      throw std::runtime_error(
+          class_name +
+          "::reloadAllFromFile: Failed to read the following variables: " + bad);
     }
   }
 
   // load from file if exists into class variable
-  [[nodiscard]] bool loadIf(const std::string& name) {
+  [[nodiscard]] bool loadIf(const std::string& name, bool ignore_read_error) {
 
     DatamapIt settings_data_it = data.find(name);
     assert(("Settings::loadIf: Did not found requested " + name).c_str() &&
@@ -110,7 +130,12 @@ class Settings {
     if (xml_element == nullptr) {
       return false;
     }
-    load(xml_element, settings_data_it);
+    const XMLError error = load(xml_element, settings_data_it);
+    if (error != XMLError::XML_SUCCESS && !ignore_read_error) {
+      throw std::runtime_error(class_name + "::loadIf: The file " + source +
+                               "had an entry " + name +
+                               " But could not be parsed.");
+    }
     return true;
   }
 
@@ -155,9 +180,9 @@ class Settings {
 
   // assumes xml_element points to stored variable and settings_data_it
   // contains the corresponding pointer and type
-  void load(const XMLElement* xml_element, const DatamapIt settings_data_it) {
+  [[nodiscard]] XMLError load(const XMLElement* xml_element, const DatamapIt settings_data_it) {
 
-    typedef std::function<void(const XMLElement*, void*, int)> loadType;
+    typedef std::function<XMLError(const XMLElement*, void*, int)> loadType;
     using namespace std::placeholders;  // _1, _2
 
     loadType load_;
@@ -188,39 +213,39 @@ class Settings {
         const std::string child_name = getChildName(i);
         const XMLElement* child = xml_element->FirstChildElement(child_name.c_str());
         assert("Settings::load: Child element (Array element) is missing." && child != nullptr);
-        load_(child, settings_data_it->second.data, i);
+        if (child != nullptr) {
+          const XMLError e = load_(child, settings_data_it->second.data, i);
+          if (e != XMLError::XML_SUCCESS) {
+            return e;
+          }
+        }
       }
+      return XMLError::XML_SUCCESS;
     } else {
-      load_(xml_element, settings_data_it->second.data, 0);
+      return load_(xml_element, settings_data_it->second.data, 0);
     }
   }
 
   /// <Loading methodes>
 
-  void loadBool(const XMLElement* xml_element, void* data, int increment) {
-    const XMLError e = xml_element->QueryBoolText(static_cast<bool*>(data) + increment);
-    assert("Settings::loadBool: Failed to read value from xml." && e == XMLError::XML_SUCCESS);
+  [[nodiscard]] XMLError loadBool(const XMLElement* xml_element, void* data, int increment) {
+    return xml_element->QueryBoolText(static_cast<bool*>(data) + increment);
   }
 
-  void loadInt(const XMLElement* xml_element, void* data, int increment) {
-    const XMLError e = xml_element->QueryIntText(static_cast<int*>(data) + increment);
-    assert("Settings::loadInt: Failed to read value from xml." && e == XMLError::XML_SUCCESS);
+  [[nodiscard]] XMLError loadInt(const XMLElement* xml_element, void* data, int increment) {
+    return xml_element->QueryIntText(static_cast<int*>(data) + increment);
   }
 
-  void loadUInt(const XMLElement* xml_element, void* data, int increment) {
-    const XMLError e =
-        xml_element->QueryUnsignedText(static_cast<unsigned int*>(data) + increment);
-    assert("Settings::loadUInt: Failed to read value from xml." && e == XMLError::XML_SUCCESS);
+  [[nodiscard]] XMLError loadUInt(const XMLElement* xml_element, void* data, int increment) {
+    return xml_element->QueryUnsignedText(static_cast<unsigned int*>(data) + increment);
   }
 
-  void loadFloat(const XMLElement* xml_element, void* data, int increment) {
-    const XMLError e = xml_element->QueryFloatText(static_cast<float*>(data) + increment);
-    assert("Settings::loadFloat: Failed to read value from xml." && e == XMLError::XML_SUCCESS);
+  [[nodiscard]] XMLError loadFloat(const XMLElement* xml_element, void* data, int increment) {
+    return xml_element->QueryFloatText(static_cast<float*>(data) + increment);
   }
 
-  void loadDouble(const XMLElement* xml_element, void* data, int increment) {
-    const XMLError e = xml_element->QueryDoubleText(static_cast<double*>(data) + increment);
-    assert("Settings::loadDouble: Failed to read value from xml." && e == XMLError::XML_SUCCESS);
+  [[nodiscard]] XMLError loadDouble(const XMLElement* xml_element, void* data, int increment) {
+    return xml_element->QueryDoubleText(static_cast<double*>(data) + increment);
   }
 
   /// </Loading methodes>

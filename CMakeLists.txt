@@ -12,14 +12,4 @@ target_include_directories(settings_lib
       INTERFACE tinyxml2)
 
 # testing
-enable_testing()
 add_subdirectory(tests)
-
-
-
-#If you are creating a shared library and your source cpp files #include the headers of another library
-#(Say, QtNetwork for example), but your header files don't include QtNetwork headers, then QtNetwork is a PRIVATE dependency.
-
-#If your source files and your headers include the headers of another library, then it is a PUBLIC dependency.
-
-#If your header files but not your source files include the headers of another library, then it is an INTERFACE dependency.
