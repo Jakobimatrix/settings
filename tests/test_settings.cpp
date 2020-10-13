@@ -22,8 +22,17 @@ constexpr double DEF_DOUBLE[3] = {2. / 5., 3. / 5., 3.141592653589793};
 static std::string EXAMPLE_DOUBLE = "ExampleDouble";
 
 static constexpr int NUM_VALS = 5;
-constexpr std::array<double, NUM_VALS> TEST_ARRAY = {{10, 20, 30, 40, 50}};
-static std::string EXAMPLE_ARRAY = "test_array";
+constexpr std::array<bool, NUM_VALS> TEST_ARRAY_B = {{true, true, true, true, true}};
+static std::string EXAMPLE_ARRAY_B = "test_array_b";
+constexpr std::array<int, NUM_VALS> TEST_ARRAY_I = {{-1, 2, -3, 4, -5}};
+static std::string EXAMPLE_ARRAY_I = "test_array_i";
+constexpr std::array<unsigned int, NUM_VALS> TEST_ARRAY_UI = {
+    {50, 0, 10010110, 01110011, 52368741}};
+static std::string EXAMPLE_ARRAY_UI = "test_array_ui";
+constexpr std::array<float, NUM_VALS> TEST_ARRAY_F = {{0.0000001f, 0.001f, 9999.f, 1, 0}};
+static std::string EXAMPLE_ARRAY_F = "test_array_f";
+constexpr std::array<double, NUM_VALS> TEST_ARRAY_D = {{10., 20., 30., 40., 50.}};
+static std::string EXAMPLE_ARRAY_D = "test_array_d";
 
 namespace utf = boost::unit_test;
 namespace tt = boost::test_tools;
@@ -56,12 +65,20 @@ class ExampleSettingsArray : public Settings {
   ExampleSettingsArray(const std::string& source_file_name)
       : Settings(source_file_name) {
     // introduce all membervariables which shall be saved.
-    put<double, NUM_VALS>(double_array[0], EXAMPLE_ARRAY);
+    put<bool, NUM_VALS>(b_array[0], EXAMPLE_ARRAY_B);
+    put<int, NUM_VALS>(i_array[0], EXAMPLE_ARRAY_I);
+    put<unsigned int, NUM_VALS>(ui_array[0], EXAMPLE_ARRAY_UI);
+    put<float, NUM_VALS>(f_array[0], EXAMPLE_ARRAY_F);
+    put<double, NUM_VALS>(d_array[0], EXAMPLE_ARRAY_D);
   }
 
   ~ExampleSettingsArray() {}
 
-  std::array<double, NUM_VALS> double_array = TEST_ARRAY;
+  std::array<bool, NUM_VALS> b_array = TEST_ARRAY_B;
+  std::array<int, NUM_VALS> i_array = TEST_ARRAY_I;
+  std::array<unsigned int, NUM_VALS> ui_array = TEST_ARRAY_UI;
+  std::array<float, NUM_VALS> f_array = TEST_ARRAY_F;
+  std::array<double, NUM_VALS> d_array = TEST_ARRAY_D;
 };
 }  // namespace util
 
@@ -199,6 +216,7 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
 
 BOOST_AUTO_TEST_CASE(settings_test_array) {
   constexpr double TOLERANCE_D = 0.000000000000001;
+  constexpr double TOLERANCE_F = 0.0000000001;
   // remove save file from previous test if exists.
 
   std::string SAVE_FILE_3 = SAVE_FILE + "_load";
@@ -209,7 +227,11 @@ BOOST_AUTO_TEST_CASE(settings_test_array) {
 
   util::ExampleSettingsArray esa_3(SAVE_FILE_3);
 
-  std::array<double, NUM_VALS> true_vals = TEST_ARRAY;
+  auto true_vals_b = TEST_ARRAY_B;
+  auto true_vals_i = TEST_ARRAY_I;
+  auto true_vals_ui = TEST_ARRAY_UI;
+  auto true_vals_f = TEST_ARRAY_F;
+  auto true_vals_d = TEST_ARRAY_D;
 
   // 1. Test save 2. and load
 
@@ -224,31 +246,94 @@ BOOST_AUTO_TEST_CASE(settings_test_array) {
     tinyxml2::XMLNode* root = settingsDocument.FirstChild();
     BOOST_TEST(root != nullptr);
 
-    tinyxml2::XMLElement* element = root->FirstChildElement(EXAMPLE_ARRAY.c_str());
-    BOOST_TEST(element != nullptr);
+    tinyxml2::XMLElement* element_b = root->FirstChildElement(EXAMPLE_ARRAY_B.c_str());
+    BOOST_TEST(element_b != nullptr);
+
+    tinyxml2::XMLElement* element_i = root->FirstChildElement(EXAMPLE_ARRAY_I.c_str());
+    BOOST_TEST(element_i != nullptr);
+
+    tinyxml2::XMLElement* element_ui = root->FirstChildElement(EXAMPLE_ARRAY_UI.c_str());
+    BOOST_TEST(element_ui != nullptr);
+
+    tinyxml2::XMLElement* element_f = root->FirstChildElement(EXAMPLE_ARRAY_F.c_str());
+    BOOST_TEST(element_f != nullptr);
+
+    tinyxml2::XMLElement* element_d = root->FirstChildElement(EXAMPLE_ARRAY_D.c_str());
+    BOOST_TEST(element_d != nullptr);
 
     for (size_t i = 0; i < NUM_VALS; i++) {
       const std::string child_name = "_" + std::to_string(i);
-      tinyxml2::XMLElement* child = element->FirstChildElement(child_name.c_str());
-      BOOST_TEST(child != nullptr);
+      tinyxml2::XMLElement* child_b = element_b->FirstChildElement(child_name.c_str());
+      BOOST_TEST(child_b != nullptr);
+      bool test_b;
+      child_b->QueryBoolText(&test_b);
+
+      tinyxml2::XMLElement* child_i = element_i->FirstChildElement(child_name.c_str());
+      BOOST_TEST(child_i != nullptr);
+      int test_i;
+      child_i->QueryIntText(&test_i);
+
+      tinyxml2::XMLElement* child_ui = element_ui->FirstChildElement(child_name.c_str());
+      BOOST_TEST(child_ui != nullptr);
+      unsigned int test_ui;
+      child_ui->QueryUnsignedText(&test_ui);
+
+      tinyxml2::XMLElement* child_f = element_f->FirstChildElement(child_name.c_str());
+      BOOST_TEST(child_f != nullptr);
+      float test_f;
+      child_f->QueryFloatText(&test_f);
+
+      tinyxml2::XMLElement* child_d = element_d->FirstChildElement(child_name.c_str());
+      BOOST_TEST(child_d != nullptr);
       double test_d;
-      child->QueryDoubleText(&test_d);
+      child_d->QueryDoubleText(&test_d);
+
+
       // test correct saved? xml = expected val?
-      BOOST_TEST(test_d == true_vals[i], tt::tolerance(TOLERANCE_D));
+      BOOST_TEST(test_b == true_vals_b[i]);
+      BOOST_TEST(test_i == true_vals_i[i]);
+      BOOST_TEST(test_ui == true_vals_ui[i]);
+      BOOST_TEST(test_f == true_vals_f[i], tt::tolerance(TOLERANCE_F));
+      BOOST_TEST(test_d == true_vals_d[i], tt::tolerance(TOLERANCE_D));
       // test load-> esa_load has same values as in xml and thus the expected values?
-      BOOST_TEST(esa_load.double_array[i] == true_vals[i], tt::tolerance(TOLERANCE_D));
+      BOOST_TEST(esa_load.b_array[i] == true_vals_b[i]);
+      BOOST_TEST(esa_load.i_array[i] == true_vals_i[i]);
+      BOOST_TEST(esa_load.ui_array[i] == true_vals_ui[i]);
+      BOOST_TEST(esa_load.f_array[i] == true_vals_f[i], tt::tolerance(TOLERANCE_F));
+      BOOST_TEST(esa_load.d_array[i] == true_vals_d[i], tt::tolerance(TOLERANCE_D));
 
       // alter the expected values
-      esa.double_array[i] *= (i + 1);
-      true_vals[i] *= (i + 1);
+      esa.b_array[i] = !esa.b_array[i];
+      true_vals_b[i] = esa.b_array[i];
+      esa.i_array[i] *= (i + 1);
+      true_vals_i[i] = esa.i_array[i];
+      esa.ui_array[i] *= (i + 1);
+      true_vals_ui[i] = esa.ui_array[i];
+      esa.f_array[i] *= (i + 1);
+      true_vals_f[i] = esa.f_array[i];
+      esa.d_array[i] *= (i + 1);
+      true_vals_d[i] = esa.d_array[i];
 
       // also change the xml and safe it in new file: SAVE_FILE_3
-      double a_rand_val = (test_d + i + J) / 3.;
-      child->SetText(a_rand_val);
+      bool b_rand_val = esa.b_array[i];
+      int i_rand_val = (test_i * 7 - J) * 3;
+      unsigned int ui_rand_val = (test_ui + 4 * i) + 77;
+      float f_rand_val = (test_f + 5 * i + J) / 3.f;
+      double d_rand_val = (test_d + i + J) / 3.;
+
+      child_b->SetText(b_rand_val);
+      child_i->SetText(i_rand_val);
+      child_ui->SetText(ui_rand_val);
+      child_f->SetText(f_rand_val);
+      child_d->SetText(d_rand_val);
       settingsDocument.SaveFile(SAVE_FILE_3.c_str());
       // now if we load esa_3 it should load the new value
       esa_3.reloadAllFromFile();
-      BOOST_TEST(esa_3.double_array[i] == a_rand_val, tt::tolerance(TOLERANCE_D));
+      BOOST_TEST(esa_3.b_array[i] == b_rand_val);
+      BOOST_TEST(esa_3.i_array[i] == i_rand_val);
+      BOOST_TEST(esa_3.ui_array[i] == ui_rand_val);
+      BOOST_TEST(esa_3.f_array[i] == f_rand_val, tt::tolerance(TOLERANCE_F));
+      BOOST_TEST(esa_3.d_array[i] == d_rand_val, tt::tolerance(TOLERANCE_D));
     }
   }
 }

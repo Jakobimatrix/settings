@@ -304,7 +304,7 @@ class Settings {
         xml_element->InsertEndChild(child);
       }
     } else {
-      xml_element->SetText(*static_cast<T*>((settings_data_it->second.data)));
+      xml_element->SetText(*element_value);
     }
     settings->InsertEndChild(xml_element);
   }
