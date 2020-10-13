@@ -70,7 +70,8 @@ class Settings {
 
  public:
   // load all member vars from file
-  void loadAll() {
+  void reloadAllFromFile() {
+    loadFile();
     // Iterate through xml and find in map (is faster than other way round).
     // same as in save() ->  FirstChildElement() does not return first element
     /*
