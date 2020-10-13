@@ -1,9 +1,11 @@
 #include <tinyxml2.h>
 
 #include <cassert>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <stdexcept>
+
 
 namespace util {
 
@@ -14,10 +16,11 @@ namespace util {
 enum Type { BOOL, INT, UINT, FLOAT, DOUBLE };
 
 struct Data {
-  Data(void* d) : data(d) {}
-  Data(void* d, Type t) : data(d), type(t) {}
-  Type type;
+  Data(void* d, int s) : data(d), size(s) {}
+  Data(void* d, Type t, int s) : data(d), type(t), size(s) {}
   void* data;
+  Type type;
+  int size;
 };
 
 using namespace tinyxml2;
@@ -33,7 +36,7 @@ class Settings {
   }
 
   // save a variable into xml
-  template <class T>
+  template <class T, size_t N = 1>
   void put(T& value, const std::string& name) {
     DatamapIt settings_data_it = data.find(name);
     assert(
@@ -44,7 +47,7 @@ class Settings {
 
     // <TYPE_SUPPORT> Use is_same to test if your new type is given.
     // Add one else if for it and putt the defined enum inti d.type.
-    Data d(&value);
+    Data d(&value, N);
     if (std::is_same<T, bool>::value) {
       d.type = Type::BOOL;
     } else if (std::is_same<T, int>::value) {
@@ -146,85 +149,78 @@ class Settings {
   }
 
  private:
+  std::string getChildName(int i) const {
+    return std::string("_" + std::to_string(i));
+  }
+
   // assumes xml_element points to stored variable and settings_data_it
   // contains the corresponding pointer and type
-  void load(XMLElement* xml_element, DatamapIt settings_data_it) {
+  void load(const XMLElement* xml_element, const DatamapIt settings_data_it) {
+
+    typedef std::function<void(const XMLElement*, void*, int)> loadType;
+    using namespace std::placeholders;  // _1, _2
+
+    loadType load_;
+
     // <TYPE_SUPPORT> Add the case for your new type and call a new methode which
     // writes the information in xml_element into the member variable.
     // The void pointer settings_data_it->second.data points to the correct adress.
     switch (settings_data_it->second.type) {
       case BOOL:
-        loadBool(xml_element, settings_data_it);
+        load_ = std::bind(&Settings::loadBool, this, _1, _2, _3);
         break;
       case INT:
-        loadInt(xml_element, settings_data_it);
+        load_ = std::bind(&Settings::loadInt, this, _1, _2, _3);
         break;
       case UINT:
-        loadUInt(xml_element, settings_data_it);
+        load_ = std::bind(&Settings::loadUInt, this, _1, _2, _3);
         break;
       case FLOAT:
-        loadFloat(xml_element, settings_data_it);
+        load_ = std::bind(&Settings::loadFloat, this, _1, _2, _3);
         break;
       case DOUBLE:
-        loadDouble(xml_element, settings_data_it);
+        load_ = std::bind(&Settings::loadDouble, this, _1, _2, _3);
         break;
+    }
+
+    if (settings_data_it->second.size > 1) {
+      for (int i = 0; i < settings_data_it->second.size; i++) {
+        const std::string child_name = getChildName(i);
+        const XMLElement* child = xml_element->FirstChildElement(child_name.c_str());
+        assert("Settings::load: Child element (Array element) is missing." && child != nullptr);
+        load_(child, settings_data_it->second.data, i);
+      }
+    } else {
+      load_(xml_element, settings_data_it->second.data, 0);
     }
   }
 
   /// <Loading methodes>
-  void loadBool(XMLElement* xml_element, DatamapIt settings_data_it) {
+
+  void loadBool(const XMLElement* xml_element, void* data, int increment) {
+    const XMLError e = xml_element->QueryBoolText(static_cast<bool*>(data) + increment);
+    assert("Settings::loadBool: Failed to read value from xml." && e == XMLError::XML_SUCCESS);
+  }
+
+  void loadInt(const XMLElement* xml_element, void* data, int increment) {
+    const XMLError e = xml_element->QueryIntText(static_cast<int*>(data) + increment);
+    assert("Settings::loadInt: Failed to read value from xml." && e == XMLError::XML_SUCCESS);
+  }
+
+  void loadUInt(const XMLElement* xml_element, void* data, int increment) {
     const XMLError e =
-        xml_element->QueryBoolText(static_cast<bool*>(settings_data_it->second.data));
-    if (e != XMLError::XML_SUCCESS) {
-      assert(("Settings::loadInt: Failed with for " + settings_data_it->first +
-              " with Error: " + std::to_string(e))
-                 .c_str() &&
-             false);
-    }
+        xml_element->QueryUnsignedText(static_cast<unsigned int*>(data) + increment);
+    assert("Settings::loadUInt: Failed to read value from xml." && e == XMLError::XML_SUCCESS);
   }
 
-  void loadInt(XMLElement* xml_element, DatamapIt settings_data_it) {
-    const XMLError e =
-        xml_element->QueryIntText(static_cast<int*>(settings_data_it->second.data));
-    if (e != XMLError::XML_SUCCESS) {
-      assert(("Settings::loadInt: Failed with for " + settings_data_it->first +
-              " with Error: " + std::to_string(e))
-                 .c_str() &&
-             false);
-    }
+  void loadFloat(const XMLElement* xml_element, void* data, int increment) {
+    const XMLError e = xml_element->QueryFloatText(static_cast<float*>(data) + increment);
+    assert("Settings::loadFloat: Failed to read value from xml." && e == XMLError::XML_SUCCESS);
   }
 
-  void loadUInt(XMLElement* xml_element, DatamapIt settings_data_it) {
-    const XMLError e = xml_element->QueryUnsignedText(
-        static_cast<unsigned int*>(settings_data_it->second.data));
-    if (e != XMLError::XML_SUCCESS) {
-      assert(("Settings::loadUInt: Failed with for " + settings_data_it->first +
-              " with Error: " + std::to_string(e))
-                 .c_str() &&
-             false);
-    }
-  }
-
-  void loadFloat(XMLElement* xml_element, DatamapIt settings_data_it) {
-    const XMLError e =
-        xml_element->QueryFloatText(static_cast<float*>(settings_data_it->second.data));
-    if (e != XMLError::XML_SUCCESS) {
-      assert(("Settings::loadFloate: Failed with for " +
-              settings_data_it->first + " with Error: " + std::to_string(e))
-                 .c_str() &&
-             false);
-    }
-  }
-
-  void loadDouble(XMLElement* xml_element, DatamapIt settings_data_it) {
-    const XMLError e = xml_element->QueryDoubleText(
-        static_cast<double*>(settings_data_it->second.data));
-    if (e != XMLError::XML_SUCCESS) {
-      assert(("Settings::loadDouble: Failed with for " +
-              settings_data_it->first + " with Error: " + std::to_string(e))
-                 .c_str() &&
-             false);
-    }
+  void loadDouble(const XMLElement* xml_element, void* data, int increment) {
+    const XMLError e = xml_element->QueryDoubleText(static_cast<double*>(data) + increment);
+    assert("Settings::loadDouble: Failed to read value from xml." && e == XMLError::XML_SUCCESS);
   }
 
   /// </Loading methodes>
@@ -297,7 +293,19 @@ class Settings {
 
   template <class T>
   void savePrimitive(XMLElement* xml_element, DatamapIt settings_data_it) {
-    xml_element->SetText(*static_cast<T*>((settings_data_it->second.data)));
+
+    T* element_value = static_cast<T*>((settings_data_it->second.data));
+
+    if (settings_data_it->second.size > 1) {
+      xml_element->DeleteChildren();
+      for (int i = 0; i < settings_data_it->second.size; i++) {
+        XMLElement* child = xml_element->InsertNewChildElement(getChildName(i).c_str());
+        child->SetText(*element_value++);
+        xml_element->InsertEndChild(child);
+      }
+    } else {
+      xml_element->SetText(*static_cast<T*>((settings_data_it->second.data)));
+    }
     settings->InsertEndChild(xml_element);
   }
 
