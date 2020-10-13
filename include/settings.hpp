@@ -11,7 +11,7 @@ namespace util {
 // search for <TYPE_SUPPORT> in this file to find all places which need new definitions.
 
 // <TYPE_SUPPORT> Define here your unique enum-type.
-enum Type { INT, UINT, FLOAT, DOUBLE };
+enum Type { BOOL, INT, UINT, FLOAT, DOUBLE };
 
 struct Data {
   Data(void* d) : data(d) {}
@@ -36,7 +36,6 @@ class Settings {
   template <class T>
   void put(T& value, const std::string& name) {
     DatamapIt settings_data_it = data.find(name);
-    std::cout << "put " << name << std::endl;
     assert(
         "Settings::put: Each member variable must be named uniquely (second "
         "parameter)! Only put "
@@ -46,7 +45,9 @@ class Settings {
     // <TYPE_SUPPORT> Use is_same to test if your new type is given.
     // Add one else if for it and putt the defined enum inti d.type.
     Data d(&value);
-    if (std::is_same<T, int>::value) {
+    if (std::is_same<T, bool>::value) {
+      d.type = Type::BOOL;
+    } else if (std::is_same<T, int>::value) {
       d.type = Type::INT;
     } else if (std::is_same<T, unsigned int>::value) {
       d.type = Type::UINT;
@@ -71,33 +72,33 @@ class Settings {
   // load all member vars from file
   void loadAll() {
     // Iterate through xml and find in map (is faster than other way round).
+    // same as in save() ->  FirstChildElement() does not return first element
+    /*
+    for (XMLElement* element = settings->FirstChildElement(); element !=
+      nullptr; element = element->NextSiblingElement()) { const std::string
+      name = element->Name(); DatamapIt settings_data_it = data.find(name);
 
-    for (XMLElement* element = settings->FirstChildElement(); element != nullptr;
-         element = element->NextSiblingElement()) {
-      const std::string name = element->Name();
-      DatamapIt settings_data_it = data.find(name);
+      assert(("Settings::loadAll: Did not found requested " + name).c_str()
+      && settings_data_it != data.end());
 
-
-      std::cout << "requesting " << name << std::endl;
-      assert(("Settings::loadAll: Did not found requested " + name).c_str() &&
-             settings_data_it != data.end());
       load(element, settings_data_it);
     }
-
-    // loop over attributes
-    /*
-    for (const tinyxml2::XMLAttribute* attr = element->FirstAttribute(); attr!=0; attr = attr->Next())
-    {
-    }
     */
+
+    for (DatamapIt it = data.begin(); it != data.end(); it++) {
+      XMLElement* element = settings->FirstChildElement(it->first.c_str());
+
+      assert(("Settings::loadAll: Did not found requested " + it->first).c_str() &&
+             element != nullptr);
+
+      load(element, it);
+    }
   }
 
   // load from file if exists into class variable
   [[nodiscard]] bool loadIf(const std::string& name) {
+
     DatamapIt settings_data_it = data.find(name);
-
-    std::cout << "requesting " << name << std::endl;
-
     assert(("Settings::loadIf: Did not found requested " + name).c_str() &&
            settings_data_it != data.end());
 
@@ -111,16 +112,29 @@ class Settings {
 
   // Save all membervariables into xml
   void save() {
-    for (XMLElement* element = settings->FirstChildElement(); element != nullptr;
-         element = element->NextSiblingElement()) {
-      const std::string name = element->Name();
-      DatamapIt settings_data_it = data.find(name);
+    // does not work for a reason:
+    // goes through each xml element and search in map. But FirstChildElement()
+    // seems not to give always first element...
+    /*
+    for (XMLElement* element = settings->FirstChildElement(); element !=
+       nullptr; element = element->NextSiblingElement()) { const std::string
+       name = element->Name(); DatamapIt settings_data_it = data.find(name);
 
+          assert(("Settings::loadAll: Did not found requested " + name).c_str()
+       && settings_data_it != data.end());
 
-      std::cout << "requesting " << name << std::endl;
-      assert(("Settings::loadAll: Did not found requested " + name).c_str() &&
-             settings_data_it != data.end());
-      save(element, settings_data_it);
+       save(element, settings_data_it);
+    }
+    */
+
+    // goes through map and searches for the name in xml, which is probably way slower.
+    for (DatamapIt it = data.begin(); it != data.end(); it++) {
+      XMLElement* element = settings->FirstChildElement(it->first.c_str());
+
+      assert(("Settings::loadAll: Did not found requested " + it->first).c_str() &&
+             element != nullptr);
+
+      save(element, it);
     }
 
     XMLError error = settingsDocument.SaveFile(source.c_str());
@@ -137,8 +151,10 @@ class Settings {
     // <TYPE_SUPPORT> Add the case for your new type and call a new methode which
     // writes the information in xml_element into the member variable.
     // The void pointer settings_data_it->second.data points to the correct adress.
-    std::cout << "load: " << settings_data_it->first << std::endl;
     switch (settings_data_it->second.type) {
+      case BOOL:
+        loadBool(xml_element, settings_data_it);
+        break;
       case INT:
         loadInt(xml_element, settings_data_it);
         break;
@@ -155,6 +171,17 @@ class Settings {
   }
 
   /// <Loading methodes>
+  void loadBool(XMLElement* xml_element, DatamapIt settings_data_it) {
+    const XMLError e =
+        xml_element->QueryBoolText(static_cast<bool*>(settings_data_it->second.data));
+    if (e != XMLError::XML_SUCCESS) {
+      assert(("Settings::loadInt: Failed with for " + settings_data_it->first +
+              " with Error: " + std::to_string(e))
+                 .c_str() &&
+             false);
+    }
+  }
+
   void loadInt(XMLElement* xml_element, DatamapIt settings_data_it) {
     const XMLError e =
         xml_element->QueryIntText(static_cast<int*>(settings_data_it->second.data));
@@ -241,14 +268,15 @@ class Settings {
     // <TYPE_SUPPORT> Add the case for your new type and call a new methode
     // which reads the value at the void pointer settings_data_it->second.data
     // and writes it into settingsDocument.
-    std::cout << "save " << std::endl;
-    std::cout << "save " << settings_data_it->first.c_str() << std::endl;
 
     if (xml_element == nullptr) {
       xml_element = settingsDocument.NewElement(settings_data_it->first.c_str());
     }
 
     switch (settings_data_it->second.type) {
+      case BOOL:
+        savePrimitive<bool>(xml_element, settings_data_it);
+        break;
       case INT:
         savePrimitive<int>(xml_element, settings_data_it);
         break;
@@ -281,5 +309,5 @@ class Settings {
 
   XMLDocument settingsDocument;
   XMLNode* settings = nullptr;
-};
+};  // namespace util
 }  // namespace util
