@@ -2,7 +2,7 @@
 A header only library to inherit from: Supports saving member variables to file and loading from file. It uses [tinyxml2](https://github.com/leethomason/tinyxml2).
 The files can be edited and thus variables can be changed without need to rebuild.
 
-Basically you have to register the membervariable once in the constructor. Thats it.
+Basically you have to register the member variables only once in the constructor. Thats it. Save to file or load from file by calling the methodes (see below).
 
 ## Supported Types:
  * bool
@@ -33,9 +33,3 @@ Basically you have to register the membervariable once in the constructor. Thats
     * `reloadAllFromFile()`. Will try to load every found member variable in the file. Throws if at least one variable was found (had an entry) but could not be parsed. If you catch and continue, all variables which could be parsed will have the parsed value, others will have their old value.
     * `save()`. Will throw if the file could not be parsed or written. If you catch, you should probably not use the file if it got created.
  
- `
- 
- 
- 
- 
- `
