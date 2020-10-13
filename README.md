@@ -1,6 +1,6 @@
 # settings
 A header only library to inherit from: Supports saving member variables to file and loading from file. It uses [tinyxml2](https://github.com/leethomason/tinyxml2).
-The files can be edited and thus variables can be changed without need to rebuild.
+The files can be edited and thus variables can be changed without the need to rebuild.
 
 Basically you have to register the member variables only once in the constructor. Thats it. Save to file or load from file by calling the methodes (see below).
 
