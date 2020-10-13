@@ -11,6 +11,7 @@ Basically you have to register the member variables only once in the constructor
  * float
  * double
  * arrays of thouse types
+ * You can easily add support for other types or even structs by provideing parser from and to that type. search for **<TYPE_SUPPORT>** in *include/settings.hpp* to find all places where you have to add some functionality.
  
 ## Dependencies:
  * [tinyxml2](https://github.com/leethomason/tinyxml2). (included as submodule)
