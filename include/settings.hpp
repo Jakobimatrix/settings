@@ -67,15 +67,15 @@ class Settings {
     // <TYPE_SUPPORT> Use is_same to test if your new type is given.
     // Add one else if for it and putt the defined enum inti d.type.
     Data d(&value, N);
-    if (std::is_same<T, bool>::value) {
+    if constexpr (std::is_same<T, bool>::value) {
       d.type = Type::BOOL;
-    } else if (std::is_same<T, int>::value) {
+    } else if constexpr (std::is_same<T, int>::value) {
       d.type = Type::INT;
-    } else if (std::is_same<T, unsigned int>::value) {
+    } else if constexpr (std::is_same<T, unsigned int>::value) {
       d.type = Type::UINT;
-    } else if (std::is_same<T, float>::value) {
+    } else if constexpr (std::is_same<T, float>::value) {
       d.type = Type::FLOAT;
-    } else if (std::is_same<T, double>::value) {
+    } else if constexpr (std::is_same<T, double>::value) {
       d.type = Type::DOUBLE;
     } else {
       const std::string error =
