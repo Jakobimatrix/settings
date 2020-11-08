@@ -1,3 +1,6 @@
+#ifndef SETTINGS
+#define SETTINGS
+
 #include <cassert>
 #include <functional>
 #include <iostream>
@@ -431,3 +434,5 @@ class Settings {
   XMLNode* settings = nullptr;
 };
 }  // namespace util
+
+#endif
