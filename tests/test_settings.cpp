@@ -37,6 +37,9 @@ static std::string EXAMPLE_ARRAY_D = "test_array_d";
 namespace utf = boost::unit_test;
 namespace tt = boost::test_tools;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+
 namespace util {
 
 class ExampleSettings : public Settings {
@@ -337,3 +340,5 @@ BOOST_AUTO_TEST_CASE(settings_test_array) {
     }
   }
 }
+
+#pragma clang diagnostic pop

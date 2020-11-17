@@ -46,8 +46,8 @@ class Settings {
   /*!
    * \brief Registers a membervariable to be saved in to xml format.
    * This should be done in the constructor of your child class.
-   * \param T The type of the membervariable.
-   * \param N (default = 1) size of array.
+   * T The type of the membervariable.
+   * N (default = 1) size of array.
    * \param value The pointer to the membervariable, or first element if array.
    * \param name A unique identifier for that variable (used in xml file)
    * \param ignore_read_error If true this methode will not throw when parsing goes wrong.
