@@ -61,11 +61,10 @@ class Settings {
           false);
     }
 
-    DatamapIt settings_data_it = data.find(name);
     assert(
         "Settings::put: Each member variable must be named uniquely (second "
         "parameter)! Only put each variable once!" &&
-        settings_data_it == data.end());
+        data.find(name) == data.end());
 
     // <TYPE_SUPPORT> Use is_same to test if your new type is given.
     // Add one else if for it and putt the defined enum inti d.type.
@@ -401,7 +400,7 @@ class Settings {
 
   /*!
    * \brief Pre stores the value of a member variable with type T.
-   * \param T Type of the to be stored variable
+   * T Type of the to be stored variable
    * \param xml_element Valid pointer to the element which stores the variable.
    * \param settings_data_it Valid interator to this->data entry (storing pointer type and size)
    */
