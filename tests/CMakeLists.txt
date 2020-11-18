@@ -12,8 +12,16 @@ if( Boost_FOUND )
   enable_testing()
   add_executable(test_settings test_settings.cpp)
 
-  target_link_libraries(test_settings
-                        tinyxml2
+  find_package (tinyxml2)
+  if (TINYXML2_FOUND)
+    target_include_directories(test_settings SYSTEM
+      PRIVATE ${TINYXML2_INCLUDE_DIRS}
+    )
+    target_link_libraries (test_settings ${TINYXML2_LIBRARIES})
+  endif (TINYXML2_FOUND)
+
+
+  target_link_libraries(test_settings    
                         settings_lib
                         ${Boost_FILESYSTEM_LIBRARY}
                         ${Boost_SYSTEM_LIBRARY}
