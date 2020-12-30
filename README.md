@@ -29,7 +29,10 @@ Basically you have to register the member variables only once in the constructor
  4. There is an example in example.cpp. You can build it with `g++ src/tinyxml2/tinyxml2.cpp example.cpp -o run_example`
     * have a look at it
     * then run it with `./run_example`
- 5. The following functions throw runtime errors (Happens when parsing xml file goes wrong.
+ 5. Make sure to define yor local environment using #include <local.h>. E.g defining `std::locale("C");` To make sure that floating point numbers always get stored with the same decimal seperator. Otherwise different environments might use different seperators!
+    
+  ## Runntime Errors:
+ *  The following functions throw runtime errors (Happens when parsing xml file goes wrong.)
     * `put<T>(T&, std::string&, bool)` here the throw can be supressed setting *bool* to true. Happens if the file had an entry of that variable but was not able to read it. If supressed or catched, the member will have its default value.
     * `reloadAllFromFile()`. Will try to load every found member variable in the file. Throws if at least one variable was found (had an entry) but could not be parsed. If you catch and continue, all variables which could be parsed will have the parsed value, others will have their old value.
     * `save()`. Will throw if the file could not be parsed or written. If you catch, you should probably not use the file if it got created.
