@@ -10,7 +10,10 @@ Basically you have to register the member variables only once in the constructor
  * unsigned int
  * float
  * double
- * arrays of thouse types
+ * arrays and (const size) vectors of thouse types
+ * In generell every class/structure where the members are stored tightly packed in an array like:
+     * Eigen: `put<double, 3>(eigen_vactor3d.x(), "eigen_vector3d")`
+     * glm:   `put<float, 3>(glm_vec3[0], "glm_vec3d")` 
  * You can easily add support for other types or even structs by provideing parser from and to that type. search for **<TYPE_SUPPORT>** in *include/settings.hpp* to find all places where you have to add some functionality.
  
 ## Dependencies:
