@@ -1,4 +1,5 @@
 #include <string>
+#include <locale>
 
 #include "include/settings.hpp"
 
@@ -54,6 +55,11 @@ class ExampleClass : public util::Settings {
 };
 
 int main() {
+ 
+  // make sure to always use the same decimal point separator
+  std::locale("C");
+ 
+ 
   const std::string FILE = "ExampleClass.xml";
 
   ExampleClass exampleClass(FILE);
