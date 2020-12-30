@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE color_test TestSuites
+#define BOOST_TEST_MODULE settings_test TestSuites
 #define BOOST_TEST_DYN_LINK
 #include <stdio.h>
 #include <tinyxml2.h>
