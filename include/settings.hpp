@@ -6,6 +6,7 @@
 #include <iostream>
 #include <map>
 #include <stdexcept>
+#include <variant>
 #include <vector>
 
 #include "../src/tinyxml2/tinyxml2.h"
@@ -13,22 +14,22 @@
 
 namespace util {
 
-// If you want to support a new type, you must define the load and save methodes for it.
+// If you want to support a new type, you must define the load methode for it.
+// The save methode is setText (see savePrimitive()) from tinyxml2.h. You might need to write your
+// own if your Type is not supported.
 // search for <TYPE_SUPPORT> in this file to find all places which need new definitions.
 
-// <TYPE_SUPPORT> Define here your unique enum-type.
-enum Type { BOOL, INT, UINT, FLOAT, DOUBLE };
-
 struct Data {
-  Data(void* d, int s) : data(d), size(s) {}
-  Data(void* d, Type t, int s) : data(d), type(t), size(s) {}
-  void* data;
-  Type type;
+  // <TYPE_SUPPORT> Define here your type inside the variant as a pointer.
+  typedef std::variant<bool*, int*, uint*, float*, double*> VariantData;
+  Data(VariantData d, int s) : data(d), size(s) {}
+  VariantData data;
   int size;
 };
 
 using namespace tinyxml2;
 class Settings {
+
   typedef std::map<std::string, Data> Datamap;
   typedef std::pair<std::string, Data> Datapair;
   typedef std::map<std::string, Data>::iterator DatamapIt;
@@ -66,26 +67,7 @@ class Settings {
         "parameter)! Only put each variable once!" &&
         data.find(name) == data.end());
 
-    // <TYPE_SUPPORT> Use is_same to test if your new type is given.
-    // Add one else if for it and putt the defined enum inti d.type.
-    Data d(&value, N);
-    if constexpr (std::is_same<T, bool>::value) {
-      d.type = Type::BOOL;
-    } else if constexpr (std::is_same<T, int>::value) {
-      d.type = Type::INT;
-    } else if constexpr (std::is_same<T, unsigned int>::value) {
-      d.type = Type::UINT;
-    } else if constexpr (std::is_same<T, float>::value) {
-      d.type = Type::FLOAT;
-    } else if constexpr (std::is_same<T, double>::value) {
-      d.type = Type::DOUBLE;
-    } else {
-      const std::string error =
-          "Settings::put: The give Type T for " + name + "is not supported.";
-      assert(error.c_str() && false);
-    }
-
-    const auto res = data.insert(std::make_pair(name, d));
+    const auto res = data.emplace(name, Data(&value, N));
 
     if (!loadIf(name, ignore_read_error)) {
       save(nullptr, res.first);
@@ -218,31 +200,18 @@ class Settings {
    */
   [[nodiscard]] XMLError load(const XMLElement* xml_element, const DatamapIt settings_data_it) {
 
-    typedef std::function<XMLError(const XMLElement*, void*, int)> loadType;
-    using namespace std::placeholders;  // _1, _2
+    auto load_ = [this](Data::VariantData& variant_data,
+                        const XMLElement* child,
+                        int increment) -> XMLError {
+      XMLError error;
+      std::visit(
+          [this, &child, &increment, &error](auto&& variant_data) -> void {
+            error = loadData(child, variant_data, increment);
+          },
+          variant_data);
+      return error;
+    };
 
-    loadType load_;
-
-    // <TYPE_SUPPORT> Add the case for your new type and call a new methode which
-    // writes the information in xml_element into the member variable.
-    // The void pointer settings_data_it->second.data points to the correct adress.
-    switch (settings_data_it->second.type) {
-      case BOOL:
-        load_ = std::bind(&Settings::loadBool, this, _1, _2, _3);
-        break;
-      case INT:
-        load_ = std::bind(&Settings::loadInt, this, _1, _2, _3);
-        break;
-      case UINT:
-        load_ = std::bind(&Settings::loadUInt, this, _1, _2, _3);
-        break;
-      case FLOAT:
-        load_ = std::bind(&Settings::loadFloat, this, _1, _2, _3);
-        break;
-      case DOUBLE:
-        load_ = std::bind(&Settings::loadDouble, this, _1, _2, _3);
-        break;
-    }
 
     if (settings_data_it->second.size > 1) {
       for (int i = 0; i < settings_data_it->second.size; i++) {
@@ -250,7 +219,9 @@ class Settings {
         const XMLElement* child = xml_element->FirstChildElement(child_name.c_str());
         assert("Settings::load: Child element (Array element) is missing." && child != nullptr);
         if (child != nullptr) {
-          const XMLError e = load_(child, settings_data_it->second.data, i);
+
+          const XMLError e = load_(settings_data_it->second.data, child, i);
+
           if (e != XMLError::XML_SUCCESS) {
             return e;
           }
@@ -258,11 +229,15 @@ class Settings {
       }
       return XMLError::XML_SUCCESS;
     } else {
-      return load_(xml_element, settings_data_it->second.data, 0);
+      return load_(settings_data_it->second.data, xml_element, 0);
     }
   }
 
   /// <Loading methodes>
+
+
+  // <TYPE_SUPPORT> Define your own loadYourType methode which loads your Type from XML into the pointer
+
   /*!
    * \brief Loads stored bool value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
@@ -271,8 +246,8 @@ class Settings {
    * \param increment Position in member variable array, or 0 if not array but simple member variable.
    * return XMLError errorflag showing if parsing was successfull.
    */
-  [[nodiscard]] XMLError loadBool(const XMLElement* xml_element, void* data, int increment) {
-    return xml_element->QueryBoolText(static_cast<bool*>(data) + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, bool* data, int increment) {
+    return xml_element->QueryBoolText(data + increment);
   }
 
   /*!
@@ -283,8 +258,8 @@ class Settings {
    * \param increment Position in member variable array, or 0 if not array but simple member variable.
    * return XMLError errorflag showing if parsing was successfull.
    */
-  [[nodiscard]] XMLError loadInt(const XMLElement* xml_element, void* data, int increment) {
-    return xml_element->QueryIntText(static_cast<int*>(data) + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, int* data, int increment) {
+    return xml_element->QueryIntText(data + increment);
   }
 
   /*!
@@ -295,8 +270,8 @@ class Settings {
    * \param increment Position in member variable array, or 0 if not array but simple member variable.
    * return XMLError errorflag showing if parsing was successfull.
    */
-  [[nodiscard]] XMLError loadUInt(const XMLElement* xml_element, void* data, int increment) {
-    return xml_element->QueryUnsignedText(static_cast<unsigned int*>(data) + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, uint* data, int increment) {
+    return xml_element->QueryUnsignedText(data + increment);
   }
 
   /*!
@@ -307,8 +282,8 @@ class Settings {
    * \param increment Position in member variable array, or 0 if not array but simple member variable.
    * return XMLError errorflag showing if parsing was successfull.
    */
-  [[nodiscard]] XMLError loadFloat(const XMLElement* xml_element, void* data, int increment) {
-    return xml_element->QueryFloatText(static_cast<float*>(data) + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, float* data, int increment) {
+    return xml_element->QueryFloatText(data + increment);
   }
 
   /*!
@@ -319,8 +294,8 @@ class Settings {
    * \param increment Position in member variable array, or 0 if not array but simple member variable.
    * return XMLError errorflag showing if parsing was successfull.
    */
-  [[nodiscard]] XMLError loadDouble(const XMLElement* xml_element, void* data, int increment) {
-    return xml_element->QueryDoubleText(static_cast<double*>(data) + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, double* data, int increment) {
+    return xml_element->QueryDoubleText(data + increment);
   }
 
   /// </Loading methodes>
@@ -369,31 +344,16 @@ class Settings {
    * \param settings_data_it Valid interator to this->data entry (storing pointer type and size)
    */
   void save(XMLElement* xml_element, DatamapIt settings_data_it) {
-    // <TYPE_SUPPORT> Add the case for your new type and call a new methode
-    // which reads the value at the void pointer settings_data_it->second.data
-    // and writes it into settingsDocument.
-
     if (xml_element == nullptr) {
       xml_element = settingsDocument.NewElement(settings_data_it->first.c_str());
     }
 
-    switch (settings_data_it->second.type) {
-      case BOOL:
-        savePrimitive<bool>(xml_element, settings_data_it);
-        break;
-      case INT:
-        savePrimitive<int>(xml_element, settings_data_it);
-        break;
-      case UINT:
-        savePrimitive<unsigned int>(xml_element, settings_data_it);
-        break;
-      case FLOAT:
-        savePrimitive<float>(xml_element, settings_data_it);
-        break;
-      case DOUBLE:
-        savePrimitive<double>(xml_element, settings_data_it);
-        break;
-    }
+    std::visit(
+        [this, &xml_element, &settings_data_it](auto&& variant_data) -> void {
+          using T = std::decay_t<decltype(variant_data)>;
+          savePrimitive(xml_element, variant_data, settings_data_it->second.size);
+        },
+        settings_data_it->second.data);
   }
 
   /// <Saving methodes>
@@ -405,19 +365,17 @@ class Settings {
    * \param settings_data_it Valid interator to this->data entry (storing pointer type and size)
    */
   template <class T>
-  void savePrimitive(XMLElement* xml_element, DatamapIt settings_data_it) {
+  void savePrimitive(XMLElement* xml_element, T data_ptr, int size) {
 
-    T* element_value = static_cast<T*>((settings_data_it->second.data));
-
-    if (settings_data_it->second.size > 1) {
+    if (size > 1) {
       xml_element->DeleteChildren();
-      for (int i = 0; i < settings_data_it->second.size; i++) {
+      for (int i = 0; i < size; i++) {
         XMLElement* child = xml_element->InsertNewChildElement(getChildName(i).c_str());
-        child->SetText(*element_value++);
+        child->SetText(*data_ptr++);
         xml_element->InsertEndChild(child);
       }
     } else {
-      xml_element->SetText(*element_value);
+      xml_element->SetText(*data_ptr);
     }
     settings->InsertEndChild(xml_element);
   }
@@ -427,7 +385,7 @@ class Settings {
   std::string class_name = "Settings";
   std::string source;
 
-  std::map<std::string, Data> data;
+  Datamap data;
 
   XMLDocument settingsDocument;
   XMLNode* settings = nullptr;
