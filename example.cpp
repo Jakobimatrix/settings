@@ -16,8 +16,9 @@ class ExampleClass : public util::Settings {
     put<bool>(exampleBool, BOOL_STRNG_ID);
     put<int>(exampleInt, INT_STRNG_ID);
     put<float>(exampleFloat, F_STRING_ID);
-    put<double>(exampleDouble, S_STRING_ID);
+    put<double>(exampleDouble, D_STRING_ID);
     put<double, NUM_D_IN_ARRAY>(example_array[0], ARRAY_ID);
+    put<std::string>(exampleString, S_STRING_ID);
   }
 
   ~ExampleClass() {}
@@ -27,7 +28,8 @@ class ExampleClass : public util::Settings {
               << BOOL_STRNG_ID << +": " << exampleBool << "\n"
               << INT_STRNG_ID << +": " << exampleInt << "\n"
               << F_STRING_ID << +": " << exampleFloat << "\n"
-              << S_STRING_ID << +": " << exampleDouble << "\n"
+              << D_STRING_ID << +": " << exampleDouble << "\n"
+              << S_STRING_ID << +": " << exampleString << "\n"
               << ARRAY_ID << +": "
               << "\n";
     for (size_t i = 0; i < NUM_D_IN_ARRAY; i++) {
@@ -42,6 +44,8 @@ class ExampleClass : public util::Settings {
   float exampleFloat = 3.141592653589793f;
   double exampleDouble = 3.141592653589793;
 
+  std::string exampleString = "This is a string123$%&/()?=*ÄÜÖ";
+
   static constexpr int NUM_D_IN_ARRAY = 3;
   std::array<double, NUM_D_IN_ARRAY> example_array;
 
@@ -50,8 +54,9 @@ class ExampleClass : public util::Settings {
   const std::string BOOL_STRNG_ID = "bool";
   const std::string INT_STRNG_ID = "integer";
   const std::string F_STRING_ID = "nearly_pi";
-  const std::string S_STRING_ID = "even_more_nearly_pi";
+  const std::string D_STRING_ID = "even_more_nearly_pi";
   const std::string ARRAY_ID = "You_should_probably_choose_a_short_name";
+  const std::string S_STRING_ID = "string";
 };
 
 int main() {

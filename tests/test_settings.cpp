@@ -20,6 +20,8 @@ constexpr float DEF_FLOAT[3] = {1.f / 3.f, 2.f / 3.f, 999999999.f};
 static std::string EXAMPLE_FLOAT = "ExampleFloat";
 constexpr double DEF_DOUBLE[3] = {2. / 5., 3. / 5., 3.141592653589793};
 static std::string EXAMPLE_DOUBLE = "ExampleDouble";
+std::string DEF_STR[3] = {"abc", "de", "fghi"};
+static std::string EXAMPLE_STRING = "ExampleStr";
 
 static constexpr int NUM_VALS = 5;
 constexpr std::array<bool, NUM_VALS> TEST_ARRAY_B = {{true, true, true, true, true}};
@@ -52,6 +54,7 @@ class ExampleSettings : public Settings {
     put<int>(exampleInt, EXAMPLE_INT);
     put<float>(exampleFloat, EXAMPLE_FLOAT);
     put<double>(exampleDouble, EXAMPLE_DOUBLE);
+    put<std::string>(exampleStr, EXAMPLE_STRING);
   }
 
   ~ExampleSettings() {}
@@ -61,6 +64,7 @@ class ExampleSettings : public Settings {
   unsigned int exampleUint = DEF_UINT[0];
   float exampleFloat = DEF_FLOAT[0];
   double exampleDouble = DEF_DOUBLE[0];
+  std::string exampleStr = DEF_STR[0];
 };
 
 class ExampleSettingsArray : public Settings {
@@ -105,6 +109,7 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
       es.exampleUint = DEF_UINT[1];
       es.exampleFloat = DEF_FLOAT[1];
       es.exampleDouble = DEF_DOUBLE[1];
+      es.exampleStr = DEF_STR[1];
       es.save();
     }
 
@@ -159,6 +164,16 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
     BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
     BOOST_TEST(test_d == DEF_DOUBLE[i], tt::tolerance(TOLERANCE_D));
     BOOST_TEST(es.exampleDouble == DEF_DOUBLE[i], tt::tolerance(TOLERANCE_D));
+
+    pElement = settings->FirstChildElement(EXAMPLE_STRING.c_str());
+    BOOST_TEST(pElement != nullptr);
+    std::string test_c;
+    error = pElement->QueryStrText(&test_c);
+    BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+    BOOST_TEST(test_c.compare(DEF_STR[i]) == 0);
+    std::cout << test_c << " VS " << DEF_STR[i] << "\n";
+    BOOST_TEST(es.exampleStr.compare(DEF_STR[i]) == 0);
+    std::cout << es.exampleStr << " VS " << DEF_STR[i] << "\n";
   }
 
   // 3. new class with same save file:
@@ -170,6 +185,8 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
   BOOST_TEST(es2.exampleUint == DEF_UINT[1]);
   BOOST_TEST(es2.exampleFloat == DEF_FLOAT[1], tt::tolerance(TOLERANCE_F));
   BOOST_TEST(es2.exampleDouble == DEF_DOUBLE[1], tt::tolerance(TOLERANCE_D));
+  BOOST_TEST(es2.exampleStr.compare(DEF_STR[1]) == 0);
+  std::cout << es2.exampleStr << " VS " << DEF_STR[1] << "\n";
 
   // 4. change a value in xml and load values in class, see if values get loaded
 
@@ -205,6 +222,11 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
   pElement->SetText(DEF_DOUBLE[2]);
   settings->InsertEndChild(pElement);
 
+  pElement = settings->FirstChildElement(EXAMPLE_STRING.c_str());
+  BOOST_TEST(pElement != nullptr);
+  pElement->SetText(DEF_STR[2].c_str());
+  settings->InsertEndChild(pElement);
+
   error = settingsDocument.SaveFile(SAVE_FILE.c_str());
   BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
 
@@ -215,6 +237,8 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
   BOOST_TEST(es2.exampleUint == DEF_UINT[2]);
   BOOST_TEST(es2.exampleFloat == DEF_FLOAT[2], tt::tolerance(TOLERANCE_F));
   BOOST_TEST(es2.exampleDouble == DEF_DOUBLE[2], tt::tolerance(TOLERANCE_D));
+  BOOST_TEST(es2.exampleStr.compare(DEF_STR[2]) == 0);
+  std::cout << es2.exampleStr << " VS " << DEF_STR[2] << "\n";
 }
 
 BOOST_AUTO_TEST_CASE(settings_test_array) {

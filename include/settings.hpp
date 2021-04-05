@@ -21,7 +21,7 @@ namespace util {
 
 struct Data {
   // <TYPE_SUPPORT> Define here your type inside the variant as a pointer.
-  typedef std::variant<bool*, int*, uint*, float*, double*> VariantData;
+  typedef std::variant<bool*, int*, uint*, float*, double*, std::string*> VariantData;
   Data(VariantData d, int s) : data(d), size(s) {}
   VariantData data;
   int size;
@@ -297,6 +297,19 @@ class Settings {
   [[nodiscard]] XMLError loadData(const XMLElement* xml_element, double* data, int increment) {
     return xml_element->QueryDoubleText(data + increment);
   }
+
+  /*!
+   * \brief Loads stored char value into member variable.
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data Void pointer to member variable or begin of array.
+   *        Assumes member variable type to be double.
+   * \param increment Position in member variable array, or 0 if not array but simple member variable.
+   * return XMLError errorflag showing if parsing was successfull.
+   */
+  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, std::string* data, int increment) {
+    return xml_element->QueryStrText(data + increment);
+  }
+
 
   /// </Loading methodes>
 
