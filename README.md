@@ -29,7 +29,7 @@ Basically you have to register the member variables only once in the constructor
     * requires boost to be installed (works with 1.65.1)
     * `cd build/`
     * `./buildAndRunTests.sh`
- 4. There is an example in example.cpp. You can build it with `g++ src/tinyxml2/tinyxml2.cpp example.cpp -o run_example`
+ 4. There is an example in example.cpp. You can build it with `g++ -std=gnu++17 src/tinyxml2/tinyxml2.cpp example.cpp -o run_example`
     * have a look at it
     * then run it with `./run_example`
  5. Make sure to define yor local environment using #include <local.h>. E.g defining `std::locale("C");` To make sure that floating point numbers always get stored with the same decimal seperator. Otherwise different environments might use different seperators!
