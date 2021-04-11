@@ -130,11 +130,11 @@ class Settings {
    * \param name A unique identifier for that variable (used in xml file)
    * \param ignore_read_error If true this methode will not throw when parsing goes wrong.
    */
-  template <class T, size_t N, typename... ARGS>
+  template <class T, size_t N = 1, typename... ARGS>
   void put(T& value,
            const std::string& name,
            void (*sanitizeVariableFunction)(T&, ARGS...),
-           const std::tuple<ARGS...>& args) {
+           const ARGS... args) {
     if (name.find(' ') != std::string::npos) {
       assert(
           "Please dont use the space character for the name "
@@ -149,7 +149,8 @@ class Settings {
 
     const std::pair<DatamapIt, bool> res = data.emplace(name, Data(&value, N));
 
-    const std::tuple<T&, ARGS...> all_args = std::tuple_cat(std::tie(value), args);
+    const std::tuple<T&, ARGS...> all_args =
+        std::tuple_cat(std::tie(value), std::make_tuple(args...));
 
     // VariadicFunction<T&, ARGS...> sanitizFunction(all_args, sanitizeVariableFunction);
     res.first->second.sanitizeFunction_ =

@@ -23,10 +23,23 @@ class ExampleClass : public util::Settings {
     // value, otherwize whatever value they point to
     // will be safed in the file.
     put<bool>(exampleBool, BOOL_STRNG_ID);
-    put<int,1,int,int>(exampleInt, INT_STRNG_ID, saneMinMax, std::make_tuple(0, 10));
     put<float>(exampleFloat, F_STRING_ID);
     put<double>(exampleDouble, D_STRING_ID);
+    
+    // Here we have an example how to automatically sanitize
+    // a variable. We additionally provide a function/Lambda/methode
+    // where the first parameter will be the reference of your value
+    // which to sanitize from user input.
+    // All other variables for this functions must be constants and
+    // given in the correct order after the function.
+    put<int>(exampleInt, INT_STRNG_ID, saneMinMax, MIN_I, MAX_I);
+
+    // Tighly packed structures like arrays, and vectors can be saved
+    // too. You only need to provide the first element and as the secondary
+    // template parameter, how many elements the structure holds.
     put<double, NUM_D_IN_ARRAY>(example_array[0], ARRAY_ID);
+
+    // Strings can be saved too.
     put<std::string>(exampleString, S_STRING_ID);
   }
 
@@ -58,6 +71,9 @@ class ExampleClass : public util::Settings {
   static constexpr int NUM_D_IN_ARRAY = 3;
   std::array<double, NUM_D_IN_ARRAY> example_array;
 
+  static constexpr int MAX_I = 10;
+  static constexpr int MIN_I = 0;
+
   // These must be unique
   // These names will be the identifiers in the xml.
   const std::string BOOL_STRNG_ID = "bool";
@@ -83,7 +99,11 @@ int main() {
   // save the corrent values of all registered membervariables:
   exampleClass.save();
   std::cout << "Now you could look at " << FILE
-            << " and change some values. Press Enter when finnished." << std::endl;
+            << " and change some values. Press Enter when finnished.\n"
+            << " The integer value has an example sanitizer function, which will"
+            << " be triggered on every save() and reloadeAllFromFile()."
+            << " If you enter a value less than 0 or more than 10, the loaded"
+            << " value will be sanitized." << std::endl;
   std::getchar();
   // change something in the file and reload into class
   exampleClass.reloadAllFromFile();

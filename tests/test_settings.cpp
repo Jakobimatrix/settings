@@ -376,12 +376,9 @@ class ExampleSaneSettings : public util::Settings {
   ExampleSaneSettings(const std::string& source_file_name)
       : Settings(source_file_name) {
     // introduce all membervariables which shall be saved.
-    put<int, 1, int, int>(
-        exampleInt, EXAMPLE_INT, saneMinMax, std::make_tuple(MIN_I, MAX_I));
-    put<float, 1, float, float>(
-        exampleFloat, EXAMPLE_FLOAT, saneMinMax, std::make_tuple(MIN_F, MAX_F));
-    put<double, 1, double, double>(
-        exampleDouble, EXAMPLE_DOUBLE, saneMinMax, std::make_tuple(MIN_D, MAX_D));
+    put<int>(exampleInt, EXAMPLE_INT, saneMinMax, MIN_I, MAX_I);
+    put<float>(exampleFloat, EXAMPLE_FLOAT, saneMinMax, MIN_F, MAX_F);
+    put<double>(exampleDouble, EXAMPLE_DOUBLE, saneMinMax, MIN_D, MAX_D);
   }
 
   ~ExampleSaneSettings() {}
