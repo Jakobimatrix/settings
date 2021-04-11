@@ -3,6 +3,9 @@
 
 #include "include/settings.hpp"
 
+// This function is used to sanitize a user input. The first input parameter
+// of every sanitizer function must be a reference to the variable in 
+// question. Every additional parameter must be known at compiletime.
 template <class T>
 void saneMinMax(T& var, T min, T max){
   if(var > max){

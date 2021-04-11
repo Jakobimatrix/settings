@@ -21,7 +21,7 @@ namespace util {
 // own if your Type is not supported.
 // search for <TYPE_SUPPORT> in this file to find all places which need new definitions.
 
-
+// inspired by http://www.perry.cz/clanky/functions.html
 template <int... Is>
 struct seq {};
 
@@ -33,8 +33,14 @@ struct gen_seq2<0, S...> {
   typedef seq<S...> type;
 };
 
+/*!
+ * \brief Virtual base function to be able to store a pointer to different templated children.
+ */
 class VirtualCall {
  public:
+  /*!
+   * \brief virtual function will be overwritten by children, to call the saved function.
+   */
   virtual void call() = 0;
 };
 
@@ -42,11 +48,25 @@ class VirtualCall {
 template <typename... ARGS>
 class VariadicFunction : public VirtualCall {
  public:
+  /*!
+   * \brief Constructor
+   * provide the arguments and the pointer to the actual function.
+   * \param args all arguments for the to be called function as std::tuple in
+   * correct order.
+   * \param Pointer to the to be called function.
+   */
   VariadicFunction(std::tuple<ARGS...> args, void (*f)(ARGS...))
       : args(args), f(f) {}
 
+  /*!
+   * \brief To call the saved function without the need of arguments.
+   */
   void call() override { callFunc(typename gen_seq2<sizeof...(ARGS)>::type()); }
 
+  /*!
+   * \brief To call the saved function.
+   * seq The index-list of the arguments for the function call.
+   */
   template <int... S>
   void callFunc(seq<S...>) {
     f(std::get<S>(args)...);
@@ -67,6 +87,9 @@ struct Data {
 
   std::unique_ptr<VirtualCall> sanitizeFunction_ = nullptr;
 
+  /*!
+   * \brief Will call the function provided in the member variable sanitizeFunction_.
+   */
   void sanitize() {
     if (sanitizeFunction_) {
       sanitizeFunction_->call();
@@ -94,6 +117,7 @@ class Settings {
   /*!
    * \brief Registers a membervariable to be saved in to xml format.
    * This should be done in the constructor of your child class.
+   * This method can throw an exception.
    * T The type of the membervariable.
    * N (default = 1) size of array.
    * \param value The pointer to the membervariable, or first element if array.
@@ -114,10 +138,14 @@ class Settings {
   /*!
    * \brief Registers a membervariable to be saved in to xml format.
    * This should be done in the constructor of your child class.
+   * This method can throw an exception!
    * T The type of the membervariable.
    * N (default = 1) size of array.
+   * ARGS... constant parameters for the sanitizer function.
    * \param value The pointer to the membervariable, or first element if array.
    * \param name A unique identifier for that variable (used in xml file)
+   * \param sanitizeVariableFunction A Function pointer to a function of type void(*f)(T&, ARGS...)
+   * \param args A parameter pack of constant values to be put into the given sanitizer function.
    * \param ignore_read_error If true this methode will not throw when parsing goes wrong.
    */
   template <class T, size_t N = 1, typename... ARGS>
