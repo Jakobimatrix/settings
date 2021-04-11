@@ -5,7 +5,9 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <stdexcept>
+#include <tuple>
 #include <variant>
 #include <vector>
 
@@ -19,12 +21,57 @@ namespace util {
 // own if your Type is not supported.
 // search for <TYPE_SUPPORT> in this file to find all places which need new definitions.
 
+
+template <int... Is>
+struct seq {};
+
+template <int N, int... Is>
+struct gen_seq2 : gen_seq2<N - 1, N - 1, Is...> {};
+
+template <int... S>
+struct gen_seq2<0, S...> {
+  typedef seq<S...> type;
+};
+
+class VirtualCall {
+ public:
+  virtual void call() = 0;
+};
+
+
+template <typename... ARGS>
+class VariadicFunction : public VirtualCall {
+ public:
+  VariadicFunction(std::tuple<ARGS...> args, void (*f)(ARGS...))
+      : args(args), f(f) {}
+
+  void call() override { callFunc(typename gen_seq2<sizeof...(ARGS)>::type()); }
+
+  template <int... S>
+  void callFunc(seq<S...>) {
+    f(std::get<S>(args)...);
+  }
+
+ private:
+  std::tuple<ARGS...> args;
+  std::function<void(ARGS...)> f;
+};
+
 struct Data {
   // <TYPE_SUPPORT> Define here your type inside the variant as a pointer.
   typedef std::variant<bool*, int*, uint*, float*, double*, std::string*> VariantData;
+
   Data(VariantData d, int s) : data(d), size(s) {}
   VariantData data;
   int size;
+
+  std::unique_ptr<VirtualCall> sanitizeFunction_ = nullptr;
+
+  void sanitize() {
+    if (sanitizeFunction_) {
+      sanitizeFunction_->call();
+    }
+  }
 };
 
 using namespace tinyxml2;
@@ -70,6 +117,46 @@ class Settings {
     const auto res = data.emplace(name, Data(&value, N));
 
     if (!loadIf(name, ignore_read_error)) {
+      save(nullptr, res.first);
+    }
+  }
+
+  /*!
+   * \brief Registers a membervariable to be saved in to xml format.
+   * This should be done in the constructor of your child class.
+   * T The type of the membervariable.
+   * N (default = 1) size of array.
+   * \param value The pointer to the membervariable, or first element if array.
+   * \param name A unique identifier for that variable (used in xml file)
+   * \param ignore_read_error If true this methode will not throw when parsing goes wrong.
+   */
+  template <class T, size_t N, typename... ARGS>
+  void put(T& value,
+           const std::string& name,
+           void (*sanitizeVariableFunction)(T&, ARGS...),
+           const std::tuple<ARGS...>& args) {
+    if (name.find(' ') != std::string::npos) {
+      assert(
+          "Please dont use the space character for the name "
+          "of your variable. TinyXml2 doesnt like that." &&
+          false);
+    }
+
+    assert(
+        "Settings::put: Each member variable must be named uniquely (second "
+        "parameter)! Only put each variable once!" &&
+        data.find(name) == data.end());
+
+    const std::pair<DatamapIt, bool> res = data.emplace(name, Data(&value, N));
+
+    const std::tuple<T&, ARGS...> all_args = std::tuple_cat(std::tie(value), args);
+
+    // VariadicFunction<T&, ARGS...> sanitizFunction(all_args, sanitizeVariableFunction);
+    res.first->second.sanitizeFunction_ =
+        std::make_unique<VariadicFunction<T&, ARGS...>>(all_args, sanitizeVariableFunction);
+
+    res.first->second.sanitize();
+    if (!loadIf(name, false)) {
       save(nullptr, res.first);
     }
   }
@@ -213,6 +300,7 @@ class Settings {
     };
 
 
+
     if (settings_data_it->second.size > 1) {
       for (int i = 0; i < settings_data_it->second.size; i++) {
         const std::string child_name = getChildName(i);
@@ -227,9 +315,14 @@ class Settings {
           }
         }
       }
+      settings_data_it->second.sanitize();
       return XMLError::XML_SUCCESS;
     } else {
-      return load_(settings_data_it->second.data, xml_element, 0);
+      const XMLError e = load_(settings_data_it->second.data, xml_element, 0);
+      if (e == XMLError::XML_SUCCESS) {
+        settings_data_it->second.sanitize();
+      }
+      return e;
     }
   }
 
@@ -360,6 +453,8 @@ class Settings {
     if (xml_element == nullptr) {
       xml_element = settingsDocument.NewElement(settings_data_it->first.c_str());
     }
+
+    settings_data_it->second.sanitize();
 
     std::visit(
         [this, &xml_element, &settings_data_it](auto&& variant_data) -> void {

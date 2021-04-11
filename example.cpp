@@ -3,6 +3,15 @@
 
 #include "include/settings.hpp"
 
+template <class T>
+void saneMinMax(T& var, T min, T max){
+  if(var > max){
+    var = max;
+  }else if(var < min){
+    var = min;
+  }
+}
+
 class ExampleClass : public util::Settings {
  public:
   ExampleClass(const std::string& source_file_name)
@@ -14,7 +23,7 @@ class ExampleClass : public util::Settings {
     // value, otherwize whatever value they point to
     // will be safed in the file.
     put<bool>(exampleBool, BOOL_STRNG_ID);
-    put<int>(exampleInt, INT_STRNG_ID);
+    put<int,1,int,int>(exampleInt, INT_STRNG_ID, saneMinMax, std::make_tuple(0, 10));
     put<float>(exampleFloat, F_STRING_ID);
     put<double>(exampleDouble, D_STRING_ID);
     put<double, NUM_D_IN_ARRAY>(example_array[0], ARRAY_ID);

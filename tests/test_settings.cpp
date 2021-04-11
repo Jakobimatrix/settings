@@ -6,6 +6,7 @@
 #include <array>
 #include <boost/test/unit_test.hpp>
 #include <cmath>
+#include <limits>
 #include <settings.hpp>
 
 static std::string SAVE_FILE = "ExampleSettingsMemberVariables.xml";
@@ -360,5 +361,203 @@ BOOST_AUTO_TEST_CASE(settings_test_array) {
     }
   }
 }
+
+template <class T>
+void saneMinMax(T& var, T min, T max) {
+  if (var > max) {
+    var = max;
+  } else if (var < min) {
+    var = min;
+  }
+}
+
+class ExampleSaneSettings : public util::Settings {
+ public:
+  ExampleSaneSettings(const std::string& source_file_name)
+      : Settings(source_file_name) {
+    // introduce all membervariables which shall be saved.
+    put<int, 1, int, int>(
+        exampleInt, EXAMPLE_INT, saneMinMax, std::make_tuple(MIN_I, MAX_I));
+    put<float, 1, float, float>(
+        exampleFloat, EXAMPLE_FLOAT, saneMinMax, std::make_tuple(MIN_F, MAX_F));
+    put<double, 1, double, double>(
+        exampleDouble, EXAMPLE_DOUBLE, saneMinMax, std::make_tuple(MIN_D, MAX_D));
+  }
+
+  ~ExampleSaneSettings() {}
+
+
+  int exampleInt;
+  float exampleFloat;
+  double exampleDouble;
+
+  void setTooHigh() {
+    exampleInt = MAX_I + 1;
+    exampleFloat = MAX_F + 1.f;
+    exampleDouble = std::numeric_limits<double>::infinity();
+  }
+
+  void setTooLow() {
+    exampleInt = MIN_I - 1;
+    exampleFloat = MIN_F - 1.f;
+    exampleDouble = -1. * std::numeric_limits<double>::infinity();
+  }
+
+  static constexpr int MAX_I = 100;
+  static constexpr int MIN_I = -10;
+  static constexpr float MAX_F = 0.001f;
+  static constexpr float MIN_F = 0.f;
+  static constexpr double MAX_D = std::numeric_limits<double>::max();
+  static constexpr double MIN_D = std::numeric_limits<double>::min();
+};
+
+BOOST_AUTO_TEST_CASE(settings_test_sanitizer_saving) {
+
+  // remove save file from previous test if exists.
+  std::remove(SAVE_FILE.c_str());
+
+  ExampleSaneSettings es(SAVE_FILE);
+  es.setTooHigh();
+  es.save();
+
+  constexpr double TOLERANCE_F = 0.0000000001;
+  constexpr double TOLERANCE_D = 0.000000000000001;
+
+  tinyxml2::XMLDocument settingsDocument;
+  tinyxml2::XMLError error = settingsDocument.LoadFile(SAVE_FILE.c_str());
+
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+  tinyxml2::XMLNode* settings = settingsDocument.FirstChild();
+  BOOST_TEST(settings != nullptr);
+
+  tinyxml2::XMLElement* pElement = settings->FirstChildElement(EXAMPLE_INT.c_str());
+  BOOST_TEST(pElement != nullptr);
+  int test_i;
+
+  error = pElement->QueryIntText(&test_i);
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+  BOOST_TEST(test_i == ExampleSaneSettings::MAX_I);
+  BOOST_TEST(es.exampleInt == ExampleSaneSettings::MAX_I);
+
+
+  pElement = settings->FirstChildElement(EXAMPLE_FLOAT.c_str());
+  BOOST_TEST(pElement != nullptr);
+  float test_f;
+  error = pElement->QueryFloatText(&test_f);
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+  BOOST_TEST(test_f == ExampleSaneSettings::MAX_F, tt::tolerance(TOLERANCE_F));
+  BOOST_TEST(es.exampleFloat == ExampleSaneSettings::MAX_F, tt::tolerance(TOLERANCE_F));
+
+  pElement = settings->FirstChildElement(EXAMPLE_DOUBLE.c_str());
+  BOOST_TEST(pElement != nullptr);
+  double test_d;
+  error = pElement->QueryDoubleText(&test_d);
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+  BOOST_TEST(test_d == ExampleSaneSettings::MAX_D, tt::tolerance(TOLERANCE_D));
+  BOOST_TEST(es.exampleDouble == ExampleSaneSettings::MAX_D, tt::tolerance(TOLERANCE_D));
+
+  es.setTooLow();
+  es.save();
+
+  error = settingsDocument.LoadFile(SAVE_FILE.c_str());
+
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+  settings = settingsDocument.FirstChild();
+  BOOST_TEST(settings != nullptr);
+
+  pElement = settings->FirstChildElement(EXAMPLE_INT.c_str());
+  BOOST_TEST(pElement != nullptr);
+
+
+  error = pElement->QueryIntText(&test_i);
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+  BOOST_TEST(test_i == ExampleSaneSettings::MIN_I);
+  BOOST_TEST(es.exampleInt == ExampleSaneSettings::MIN_I);
+
+
+  pElement = settings->FirstChildElement(EXAMPLE_FLOAT.c_str());
+  BOOST_TEST(pElement != nullptr);
+  error = pElement->QueryFloatText(&test_f);
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+  BOOST_TEST(test_f == ExampleSaneSettings::MIN_F, tt::tolerance(TOLERANCE_F));
+  BOOST_TEST(es.exampleFloat == ExampleSaneSettings::MIN_F, tt::tolerance(TOLERANCE_F));
+
+  pElement = settings->FirstChildElement(EXAMPLE_DOUBLE.c_str());
+  BOOST_TEST(pElement != nullptr);
+  error = pElement->QueryDoubleText(&test_d);
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+  BOOST_TEST(test_d == ExampleSaneSettings::MIN_D, tt::tolerance(TOLERANCE_D));
+  BOOST_TEST(es.exampleDouble == ExampleSaneSettings::MIN_D, tt::tolerance(TOLERANCE_D));
+}
+
+BOOST_AUTO_TEST_CASE(settings_test_sanitizer_loading) {
+
+  // remove save file from previous test if exists.
+  std::remove(SAVE_FILE.c_str());
+
+  ExampleSaneSettings es(SAVE_FILE);
+  es.save();
+
+  constexpr double TOLERANCE_F = 0.0000000001;
+  constexpr double TOLERANCE_D = 0.000000000000001;
+
+  tinyxml2::XMLDocument settingsDocument;
+  tinyxml2::XMLError error = settingsDocument.LoadFile(SAVE_FILE.c_str());
+
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+  tinyxml2::XMLNode* settings = settingsDocument.FirstChild();
+  BOOST_TEST(settings != nullptr);
+
+  // Set too high
+  tinyxml2::XMLElement* pElement = settings->FirstChildElement(EXAMPLE_INT.c_str());
+  BOOST_TEST(pElement != nullptr);
+  pElement->SetText(ExampleSaneSettings::MAX_I + 1);
+  settings->InsertEndChild(pElement);
+
+  pElement = settings->FirstChildElement(EXAMPLE_FLOAT.c_str());
+  BOOST_TEST(pElement != nullptr);
+  pElement->SetText(ExampleSaneSettings::MAX_F + 1.f);
+  settings->InsertEndChild(pElement);
+
+  pElement = settings->FirstChildElement(EXAMPLE_DOUBLE.c_str());
+  BOOST_TEST(pElement != nullptr);
+  pElement->SetText(std::numeric_limits<double>::infinity());
+  settings->InsertEndChild(pElement);
+
+  error = settingsDocument.SaveFile(SAVE_FILE.c_str());
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+
+  es.reloadAllFromFile();
+
+  BOOST_TEST(es.exampleInt == ExampleSaneSettings::MAX_I);
+  BOOST_TEST(es.exampleFloat == ExampleSaneSettings::MAX_F, tt::tolerance(TOLERANCE_F));
+  BOOST_TEST(es.exampleDouble == ExampleSaneSettings::MAX_D, tt::tolerance(TOLERANCE_D));
+
+  // set too low
+  pElement = settings->FirstChildElement(EXAMPLE_INT.c_str());
+  BOOST_TEST(pElement != nullptr);
+  pElement->SetText(ExampleSaneSettings::MIN_I - 1);
+  settings->InsertEndChild(pElement);
+
+  pElement = settings->FirstChildElement(EXAMPLE_FLOAT.c_str());
+  BOOST_TEST(pElement != nullptr);
+  pElement->SetText(ExampleSaneSettings::MIN_F - 1.f);
+  settings->InsertEndChild(pElement);
+
+  pElement = settings->FirstChildElement(EXAMPLE_DOUBLE.c_str());
+  BOOST_TEST(pElement != nullptr);
+  pElement->SetText(-1. * std::numeric_limits<double>::infinity());
+  settings->InsertEndChild(pElement);
+
+  error = settingsDocument.SaveFile(SAVE_FILE.c_str());
+  BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
+
+  es.reloadAllFromFile();
+
+  BOOST_TEST(es.exampleInt == ExampleSaneSettings::MIN_I);
+  BOOST_TEST(es.exampleFloat == ExampleSaneSettings::MIN_F, tt::tolerance(TOLERANCE_F));
+  BOOST_TEST(es.exampleDouble == ExampleSaneSettings::MIN_D, tt::tolerance(TOLERANCE_D));
+}
+
 
 #pragma clang diagnostic pop
