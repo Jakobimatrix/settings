@@ -27,7 +27,8 @@ class ExampleClass : public util::Settings {
     // will be safed in the file.
     put<bool>(exampleBool, BOOL_STRNG_ID);
     put<float>(exampleFloat, F_STRING_ID);
-    put<double>(exampleDouble, D_STRING_ID);
+    // behold Template auto deduction:
+    put(exampleDouble, D_STRING_ID);
     
     // Here we have an example how to automatically sanitize
     // a variable. We additionally provide a function/Lambda/methode
@@ -35,15 +36,16 @@ class ExampleClass : public util::Settings {
     // which to sanitize from user input.
     // All other variables for this functions must be constants and
     // given in the correct order after the function.
-    put<int>(exampleInt, INT_STRNG_ID, saneMinMax, MIN_I, MAX_I);
+    put(exampleInt, INT_STRNG_ID, saneMinMax, MIN_I, MAX_I);
 
     // Tighly packed structures like arrays, and vectors can be saved
     // too. You only need to provide the first element and as the secondary
     // template parameter, how many elements the structure holds.
+    // In that case we NEED all tenmplate parameter!
     put<double, NUM_D_IN_ARRAY>(example_array[0], ARRAY_ID);
 
     // Strings can be saved too.
-    put<std::string>(exampleString, S_STRING_ID);
+    put(exampleString, S_STRING_ID);
   }
 
   ~ExampleClass() {}
@@ -103,10 +105,10 @@ int main() {
   exampleClass.save();
   std::cout << "Now you could look at " << FILE
             << " and change some values. Press Enter when finnished.\n"
-            << " The integer value has an example sanitizer function, which will"
-            << " be triggered on every save() and reloadeAllFromFile()."
-            << " If you enter a value less than 0 or more than 10, the loaded"
-            << " value will be sanitized." << std::endl;
+            << "The integer value has an example sanitizer function, which will\n"
+            << "be triggered on every save() and reloadeAllFromFile().\n"
+            << "If you enter a value less than 0 or more than 10, the loaded\n"
+            << "value will be sanitized." << std::endl;
   std::getchar();
   // change something in the file and reload into class
   exampleClass.reloadAllFromFile();
