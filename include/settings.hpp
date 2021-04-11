@@ -102,17 +102,7 @@ class Settings {
    */
   template <class T, size_t N = 1>
   void put(T& value, const std::string& name, bool ignore_read_error = false) {
-    if (name.find(' ') != std::string::npos) {
-      assert(
-          "Please dont use the space character for the name "
-          "of your variable. TinyXml2 doesnt like that." &&
-          false);
-    }
-
-    assert(
-        "Settings::put: Each member variable must be named uniquely (second "
-        "parameter)! Only put each variable once!" &&
-        data.find(name) == data.end());
+    putAssert(name);
 
     const auto res = data.emplace(name, Data(&value, N));
 
@@ -135,17 +125,7 @@ class Settings {
            const std::string& name,
            void (*sanitizeVariableFunction)(T&, ARGS...),
            const ARGS... args) {
-    if (name.find(' ') != std::string::npos) {
-      assert(
-          "Please dont use the space character for the name "
-          "of your variable. TinyXml2 doesnt like that." &&
-          false);
-    }
-
-    assert(
-        "Settings::put: Each member variable must be named uniquely (second "
-        "parameter)! Only put each variable once!" &&
-        data.find(name) == data.end());
+    putAssert(name);
 
     const std::pair<DatamapIt, bool> res = data.emplace(name, Data(&value, N));
 
@@ -160,6 +140,20 @@ class Settings {
     if (!loadIf(name, false)) {
       save(nullptr, res.first);
     }
+  }
+
+  void putAssert(const std::string& name) {
+    if (name.find(' ') != std::string::npos) {
+      assert(
+          "Please dont use the space character for the name "
+          "of your variable. TinyXml2 doesnt like that." &&
+          false);
+    }
+
+    assert(
+        "Settings::put: Each member variable must be named uniquely (second "
+        "parameter)! Only put each variable once!" &&
+        data.find(name) == data.end());
   }
 
  public:
