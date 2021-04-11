@@ -171,9 +171,7 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
     error = pElement->QueryStrText(&test_c);
     BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
     BOOST_TEST(test_c.compare(DEF_STR[i]) == 0);
-    std::cout << test_c << " VS " << DEF_STR[i] << "\n";
     BOOST_TEST(es.exampleStr.compare(DEF_STR[i]) == 0);
-    std::cout << es.exampleStr << " VS " << DEF_STR[i] << "\n";
   }
 
   // 3. new class with same save file:
@@ -186,7 +184,6 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
   BOOST_TEST(es2.exampleFloat == DEF_FLOAT[1], tt::tolerance(TOLERANCE_F));
   BOOST_TEST(es2.exampleDouble == DEF_DOUBLE[1], tt::tolerance(TOLERANCE_D));
   BOOST_TEST(es2.exampleStr.compare(DEF_STR[1]) == 0);
-  std::cout << es2.exampleStr << " VS " << DEF_STR[1] << "\n";
 
   // 4. change a value in xml and load values in class, see if values get loaded
 
@@ -238,7 +235,6 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
   BOOST_TEST(es2.exampleFloat == DEF_FLOAT[2], tt::tolerance(TOLERANCE_F));
   BOOST_TEST(es2.exampleDouble == DEF_DOUBLE[2], tt::tolerance(TOLERANCE_D));
   BOOST_TEST(es2.exampleStr.compare(DEF_STR[2]) == 0);
-  std::cout << es2.exampleStr << " VS " << DEF_STR[2] << "\n";
 }
 
 BOOST_AUTO_TEST_CASE(settings_test_array) {
