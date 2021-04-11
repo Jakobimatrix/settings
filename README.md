@@ -45,44 +45,45 @@ You can define a sanity check function for the variable.
 
 ## Code snippet
 
-	// Have a sanity check (not necessarry)
-	template <class T>
-	void mustBeAtLeast(T& var, T min){
-		if(var < min){
-			var = min;
-		}
+```cpp
+// Have a sanity check (not necessarry)
+template <class T>
+void mustBeAtLeast(T& var, T min){
+	if(var < min){
+		var = min;
 	}
+}
+
+// inherit from Settings
+class YourClass : public util::Settings{...
+
+// have a member variable
+double height = 200.;
+static constexpr double MIN_HEIGHT = 10.;
+
+// provide a path to the config file at construction time
+YourClass(const std::string source_file_name) : Settings(source_file_name) {
+	// inside your class constructor mark the variable to be stored
+	// EITHER LIKE THIS
+	put(height, "unique_key_height");
+	// OR LIKE THIS WITH SANITY CHECK
+	put(height, "unique_key_height", mustBeAtLeast, MIN_HEIGHT); 
+	// If the settings file already existed and had an entry <unique_key_height>...</unique_key_height> 
+	// this->height will now hold that value
 	
-	// inherit from Settings
-	class YourClass : public util::Settings{...
-	
-	// have a member variable
-	double height = 200.;
-	static constexpr double MIN_HEIGHT = 10.;
-	
-	// provide a path to the config file at construction time
-	YourClass(const std::string source_file_name) : Settings(source_file_name) {
-		// inside your class constructor mark the variable to be stored
-		// EITHER LIKE THIS
-		put(height, "unique_key_height");
-		// OR LIKE THIS WITH SANITY CHECK
-		put(height, "unique_key_height", mustBeAtLeast, MIN_HEIGHT); 
-		// If the settings file already existed and had an entry <unique_key_height>...</unique_key_height> 
-		// this->height will now hold that value
-		
-		// If a sanity function is provided, that function will be called on every load from config and every save to config.
-		...
-		}
+	// If a sanity function is provided, that function will be called on every load from config and every save to config.
 	...
-	};
+	}
+...
+};
 	
-	// Somewhere outside the class:
-	YourClass your_class("settings/YourClass.xml");
-	// You can trigger to save all the current values into the config with
-	your_class.save();
-	
-	// You can force a reload of all values from config with
-	your_class.reloadAllFromFile();
-	
+// Somewhere outside the class:
+YourClass your_class("settings/YourClass.xml");
+// You can trigger to save all the current values into the config with
+your_class.save();
+
+// You can force a reload of all values from config with
+your_class.reloadAllFromFile();
+```
 	
  
