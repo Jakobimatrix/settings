@@ -1,6 +1,8 @@
 #ifndef SETTINGS
 #define SETTINGS
 
+#include <tinyxml2.h>
+
 #include <cassert>
 #include <functional>
 #include <iostream>
@@ -10,9 +12,6 @@
 #include <tuple>
 #include <variant>
 #include <vector>
-
-#include "../src/tinyxml2/tinyxml2.h"
-
 
 namespace util {
 

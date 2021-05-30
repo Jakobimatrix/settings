@@ -1,13 +1,14 @@
 #define BOOST_TEST_MODULE settings_test TestSuites
 #define BOOST_TEST_DYN_LINK
 #include <stdio.h>
-#include <tinyxml2.h>
 
 #include <array>
 #include <boost/test/unit_test.hpp>
 #include <cmath>
 #include <limits>
 #include <settings.hpp>
+
+#include <tinyxml2.h>
 
 static std::string SAVE_FILE = "ExampleSettingsMemberVariables.xml";
 
