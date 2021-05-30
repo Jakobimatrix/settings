@@ -25,17 +25,22 @@ You can define a sanity check function for the variable.
 ## How to use:
  1. Clone the repository and update the submodule
     * `git clone ...`
+    * `cd settings`
     * `git submodule update --init --recursive`
- 2. Include the library (header only) using the provided CMakeLists.txt or just include the relative path: 
+ 2. To avoid getting flodded with warnings from tinyxml2 I recomend to install it (This step is not necessary)
+    * `cd src/tinyxml2/ && mkdir build && cd build`
+    * `cmake -DCMAKE_BUILD_TYPE=RELEASE ..`
+    * `sudo make install`
+ 3. Include the library (header only) using the provided CMakeLists.txt or just include the relative path: 
     * e.g: `#include "settings/include/settings.hpp"`
- 3. In the build folder there is a bash script to build and run the unit tests for tinyxml2 and the Settings class.
+ 4. In the build folder there is a bash script to build and run the unit tests for tinyxml2 and the Settings class.
     * requires boost to be installed (works with 1.65.1)
     * `cd build/`
     * `./buildAndRunTests.sh`
- 4. There is an example in example.cpp. You can build it with `g++ -std=gnu++17 src/tinyxml2/tinyxml2.cpp example.cpp -o run_example`
+ 5. There is an example in example.cpp. You can build it with `g++ -std=gnu++17 src/tinyxml2/tinyxml2.cpp example.cpp -o run_example`
     * have a look at it
     * then run it with `./run_example`
- 5. Make sure to define yor local environment using `#include <local.h>`. E.g defining `std::locale("C");` To make sure that floating point numbers always get stored with the same decimal seperator. Otherwise different environments might use different seperators!
+ 6. Make sure to define yor local environment using `#include <local.h>`. E.g defining `std::locale("C");` To make sure that floating point numbers always get stored with the same decimal seperator. Otherwise different environments might use different seperators!
     
   ## Runntime Errors:
  *  The following functions throw runtime errors (Happens when parsing xml file goes wrong.)
