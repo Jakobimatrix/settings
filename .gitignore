@@ -47,3 +47,4 @@ Release/src/
 Debug/src/
 build/
 *.xml
+run_example

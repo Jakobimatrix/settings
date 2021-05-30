@@ -38,14 +38,9 @@ target_include_directories(settings_lib
       INTERFACE SYSTEM ${TinyXML2_INCLUDE_DIRS})
 
 
-option(TEST_SETTINGS "Build tests for settings_lib" FALSE)
+option(TEST_SETTINGS "Build tests for settings_lib and tinyxml2" FALSE)
 if(TEST_SETTINGS)
   enable_testing()
   add_subdirectory(tests)
-endif()
-
-option(TEST_TINY_XML "Build tests for tinyxml2" FALSE)
-if(TEST_TINY_XML)
-  enable_testing()
-  add_subdirectory(tests)
+  add_subdirectory(src/tinyxml2)
 endif()
