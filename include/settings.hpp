@@ -80,7 +80,7 @@ struct Data {
   // <TYPE_SUPPORT> Define here your type inside the variant as a pointer.
   typedef std::variant<bool*, int*, uint*, float*, double*, std::string*> VariantData;
 
-  Data(VariantData d, int s) : data(d), size(s) {}
+  Data(const VariantData& d, int s) : data(d), size(s) {}
   VariantData data;
   int size;
 
@@ -108,10 +108,7 @@ class Settings {
    * \brief Constructor needs the path to the source file.
    * The file does not need to exist.
    */
-  Settings(const std::string& source) {
-    this->source = source;
-    loadFile();
-  }
+  explicit Settings(const std::string& source) : source(source) { loadFile(); }
 
   /*!
    * \brief Registers a membervariable to be saved in to xml format.
@@ -205,7 +202,7 @@ class Settings {
     */
 
     std::vector<std::string> bad_variables;
-    for (DatamapIt it = data.begin(); it != data.end(); it++) {
+    for (DatamapIt it = data.begin(); it != data.end(); ++it) {
       XMLElement* element = settings->FirstChildElement(it->first.c_str());
 
       assert(("Settings::loadAll: Did not found requested " + it->first).c_str() &&
@@ -248,7 +245,7 @@ class Settings {
     */
 
     // goes through map and searches for the name in xml, which is probably way slower.
-    for (DatamapIt it = data.begin(); it != data.end(); it++) {
+    for (DatamapIt it = data.begin(); it != data.end(); ++it) {
       XMLElement* element = settings->FirstChildElement(it->first.c_str());
 
       assert(("Settings::loadAll: Did not found requested " + it->first).c_str() &&
