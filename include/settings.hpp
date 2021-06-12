@@ -216,7 +216,7 @@ class Settings {
     if (bad_variables.size() > 0) {
       std::string bad = "";
       for (const auto& str : bad_variables) {
-        bad += "\n" + str;
+        bad += (bad.length() > 0 ? ", " : "") + str;
       }
       throw std::runtime_error(
           class_name +
