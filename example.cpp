@@ -25,10 +25,13 @@ class ExampleClass : public util::Settings {
     // All the membervariables should have a default
     // value, otherwize whatever value they point to
     // will be safed in the file.
-    put<bool>(exampleBool, BOOL_STRNG_ID);
-    put<float>(exampleFloat, F_STRING_ID);
+
+    const bool dont_throw_bad_parsing = true;
+
+    put<bool>(exampleBool, BOOL_STRNG_ID, dont_throw_bad_parsing);
+    put<float>(exampleFloat, F_STRING_ID, dont_throw_bad_parsing);
     // behold Template auto deduction:
-    put(exampleDouble, D_STRING_ID);
+    put(exampleDouble, D_STRING_ID, dont_throw_bad_parsing);
     
     // Here we have an example how to automatically sanitize
     // a variable. We additionally provide a function/Lambda/methode
@@ -36,16 +39,16 @@ class ExampleClass : public util::Settings {
     // which to sanitize from user input.
     // All other variables for this functions must be constants and
     // given in the correct order after the function.
-    put(exampleInt, INT_STRNG_ID, saneMinMax, MIN_I, MAX_I);
+    put(exampleInt, INT_STRNG_ID, dont_throw_bad_parsing, saneMinMax, MIN_I, MAX_I);
 
     // Tighly packed structures like arrays, and vectors can be saved
     // too. You only need to provide the first element and as the secondary
     // template parameter, how many elements the structure holds.
     // In that case we NEED all tenmplate parameter!
-    put<double, NUM_D_IN_ARRAY>(example_array[0], ARRAY_ID);
+    put<double, NUM_D_IN_ARRAY>(example_array[0], ARRAY_ID, dont_throw_bad_parsing);
 
     // Strings can be saved too.
-    put(exampleString, S_STRING_ID);
+    put(exampleString, S_STRING_ID, dont_throw_bad_parsing);
   }
 
   ~ExampleClass() {}

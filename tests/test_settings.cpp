@@ -51,12 +51,13 @@ class ExampleSettings : public Settings {
   ExampleSettings(const std::string& source_file_name)
       : Settings(source_file_name) {
     // introduce all membervariables which shall be saved.
-    put<bool>(exampleBool, EXAMPLE_BOOL);
-    put<unsigned int>(exampleUint, EXAMPLE_UINT);
-    put<int>(exampleInt, EXAMPLE_INT);
-    put<float>(exampleFloat, EXAMPLE_FLOAT);
-    put<double>(exampleDouble, EXAMPLE_DOUBLE);
-    put<std::string>(exampleStr, EXAMPLE_STRING);
+    const bool dont_throw_bad_parsing = true;
+    put<bool>(exampleBool, EXAMPLE_BOOL, dont_throw_bad_parsing);
+    put<unsigned int>(exampleUint, EXAMPLE_UINT, dont_throw_bad_parsing);
+    put<int>(exampleInt, EXAMPLE_INT, dont_throw_bad_parsing);
+    put<float>(exampleFloat, EXAMPLE_FLOAT, dont_throw_bad_parsing);
+    put<double>(exampleDouble, EXAMPLE_DOUBLE, dont_throw_bad_parsing);
+    put<std::string>(exampleStr, EXAMPLE_STRING, dont_throw_bad_parsing);
   }
 
   ~ExampleSettings() {}
@@ -74,11 +75,12 @@ class ExampleSettingsArray : public Settings {
   ExampleSettingsArray(const std::string& source_file_name)
       : Settings(source_file_name) {
     // introduce all membervariables which shall be saved.
-    put<bool, NUM_VALS>(b_array[0], EXAMPLE_ARRAY_B);
-    put<int, NUM_VALS>(i_array[0], EXAMPLE_ARRAY_I);
-    put<unsigned int, NUM_VALS>(ui_array[0], EXAMPLE_ARRAY_UI);
-    put<float, NUM_VALS>(f_array[0], EXAMPLE_ARRAY_F);
-    put<double, NUM_VALS>(d_array[0], EXAMPLE_ARRAY_D);
+    const bool dont_throw_bad_parsing = true;
+    put<bool, NUM_VALS>(b_array[0], EXAMPLE_ARRAY_B, dont_throw_bad_parsing);
+    put<int, NUM_VALS>(i_array[0], EXAMPLE_ARRAY_I, dont_throw_bad_parsing);
+    put<unsigned int, NUM_VALS>(ui_array[0], EXAMPLE_ARRAY_UI, dont_throw_bad_parsing);
+    put<float, NUM_VALS>(f_array[0], EXAMPLE_ARRAY_F, dont_throw_bad_parsing);
+    put<double, NUM_VALS>(d_array[0], EXAMPLE_ARRAY_D, dont_throw_bad_parsing);
   }
 
   ~ExampleSettingsArray() {}
@@ -377,9 +379,10 @@ class ExampleSaneSettings : public util::Settings {
   ExampleSaneSettings(const std::string& source_file_name)
       : Settings(source_file_name) {
     // introduce all membervariables which shall be saved.
-    put<int>(exampleInt, EXAMPLE_INT, saneMinMax, MIN_I, MAX_I);
-    put<float>(exampleFloat, EXAMPLE_FLOAT, saneMinMax, MIN_F, MAX_F);
-    put<double>(exampleDouble, EXAMPLE_DOUBLE, saneMinMax, MIN_D, MAX_D);
+    const bool dont_throw_bad_parsing = true;
+    put<int>(exampleInt, EXAMPLE_INT, dont_throw_bad_parsing, saneMinMax, MIN_I, MAX_I);
+    put<float>(exampleFloat, EXAMPLE_FLOAT, dont_throw_bad_parsing, saneMinMax, MIN_F, MAX_F);
+    put<double>(exampleDouble, EXAMPLE_DOUBLE, dont_throw_bad_parsing, saneMinMax, MIN_D, MAX_D);
   }
 
   ~ExampleSaneSettings() {}

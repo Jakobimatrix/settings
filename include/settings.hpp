@@ -78,6 +78,7 @@ class VariadicFunction : public VirtualCall {
 
 struct Data {
   // <TYPE_SUPPORT> Define here your type inside the variant as a pointer.
+  // At the moment strings longer than 200 char will get croped!!
   typedef std::variant<bool*, int*, uint*, float*, double*, std::string*> VariantData;
 
   Data(const VariantData& d, int s) : data(d), size(s) {}
@@ -121,7 +122,7 @@ class Settings {
    * \param ignore_read_error If true this methode will not throw when parsing goes wrong.
    */
   template <class T, size_t N = 1>
-  void put(T& value, const std::string& name, bool ignore_read_error = false) {
+  void put(T& value, const std::string& name, bool ignore_read_error) {
     putAssert(name);
 
     const auto res = data.emplace(name, Data(&value, N));
@@ -147,6 +148,7 @@ class Settings {
   template <class T, size_t N = 1, typename... ARGS>
   void put(T& value,
            const std::string& name,
+           bool ignore_read_error,
            void (*sanitizeVariableFunction)(T&, ARGS...),
            const ARGS... args) {
     putAssert(name);
@@ -161,7 +163,7 @@ class Settings {
         std::make_unique<VariadicFunction<T&, ARGS...>>(all_args, sanitizeVariableFunction);
 
     res.first->second.sanitize();
-    if (!loadIf(name, false)) {
+    if (!loadIf(name, ignore_read_error)) {
       save(nullptr, res.first);
     }
   }
@@ -281,7 +283,10 @@ class Settings {
       return false;
     }
     const XMLError error = load(xml_element, settings_data_it);
-    if (error != XMLError::XML_SUCCESS && !ignore_read_error) {
+    // We only throw if we could not parse, but there was data (which is corrupted).
+    // We dont throw if there wasnt data at all: error == XML_NO_TEXT_NODE. (Just use default).
+    // We dont throw if the programmer decided that it is ok to use default value if data is corrupted.
+    if (error != XMLError::XML_SUCCESS && !ignore_read_error && error != XML_NO_TEXT_NODE) {
       throw std::runtime_error(class_name + "::loadIf: The file " + source +
                                "had an entry " + name +
                                " But could not be parsed.");
@@ -431,7 +436,7 @@ class Settings {
   void loadFile() {
     XMLError error = settingsDocument.LoadFile(source.c_str());
     if (error != XMLError::XML_SUCCESS) {
-      if (error == XMLError::XML_ERROR_FILE_NOT_FOUND) {
+      if (error == XMLError::XML_ERROR_FILE_NOT_FOUND || XMLError::XML_ERROR_EMPTY_DOCUMENT) {
         settingsDocument.ClearError();
         settingsDocument.Clear();
         // define root element
