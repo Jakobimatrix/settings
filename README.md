@@ -48,6 +48,8 @@ You can define a sanity check function for the variable.
     * `put<T>(T&, std::string&, bool)` here the throw can be supressed setting *bool* to true. Happens if the file had an entry of that variable but was not able to read it. If supressed or catched, the member will have its default value.
     * `reloadAllFromFile()`. Will try to load every found member variable in the file. Throws if at least one variable was found (had an entry) but could not be parsed. If you catch and continue, all variables which could be parsed will have the parsed value, others will have their old value.
     * `save()`. Will throw if the file could not be parsed or written. If you catch, you should probably not use the file if it got created.
+    * `deleteFile()`. Uses std::filesystem to delete the xml file storing the classes data. This might throw an exception on underlying OS API errors.
+    * `moveFile()`. Uses std::filesystem to move the xml file storing the classes data. This might throw an exception on underlying OS API errors.
 
 ## Code snippet
 

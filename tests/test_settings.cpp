@@ -10,6 +10,7 @@
 #include <tinyxml2.h>
 
 static std::string SAVE_FILE = "ExampleSettingsMemberVariables.xml";
+static std::string SAVE_FILE_MOVE = "ExampleSettingsMemberVariables2.xml";
 
 constexpr bool DEF_BOOL[3] = {true, false, true};
 static std::string EXAMPLE_BOOL = "ExampleBool";
@@ -583,6 +584,30 @@ BOOST_AUTO_TEST_CASE(settings_test_sanitizer_loading) {
              tt::tolerance(TOLERANCE_F));
   BOOST_TEST(es.exampleDouble == ExampleSaneSettings::MIN_D,
              tt::tolerance(TOLERANCE_D));
+}
+
+BOOST_AUTO_TEST_CASE(settings_test_delete_move_file) {
+  constexpr double TOLERANCE_F = 0.0000000001;
+  constexpr double TOLERANCE_D = 0.000000000000001;
+
+  std::remove(SAVE_FILE.c_str());
+
+  ExampleSaneSettings es(SAVE_FILE);
+  BOOST_TEST(es.deleteFile() == true);
+  es.save();
+  BOOST_TEST(es.deleteFile() == true);
+  es.exampleInt++;
+  es.exampleFloat *= 7.77;
+  es.exampleDouble /= 77.7;
+
+  BOOST_TEST(es.moveFile(SAVE_FILE_MOVE) == true);
+  ExampleSaneSettings es2(SAVE_FILE_MOVE);
+
+  BOOST_TEST(es.exampleInt == es2.exampleInt);
+  BOOST_TEST(es.exampleFloat == es2.exampleFloat, tt::tolerance(TOLERANCE_F));
+  BOOST_TEST(es.exampleDouble == es2.exampleDouble, tt::tolerance(TOLERANCE_D));
+
+  es2.deleteFile();
 }
 
 #pragma clang diagnostic pop

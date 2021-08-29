@@ -1,13 +1,14 @@
 #ifndef SETTINGS
 #define SETTINGS
 
-#include <tinyxml2.h>
 #include <cassert>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <stdexcept>
+#include <tinyxml2.h>
 #include <tuple>
 #include <variant>
 #include <vector>
@@ -102,7 +103,7 @@ protected:
    * \brief Constructor needs the path to the source file.
    * The file does not need to exist.
    */
-  explicit Settings(const std::string &source) : source(source) { loadFile(); }
+  Settings(const std::filesystem::path &source) : source(source) { loadFile(); }
 
   /*!
    * \brief Registers a membervariable to be saved in to xml format.
@@ -254,9 +255,58 @@ public:
 
     XMLError error = settingsDocument.SaveFile(source.c_str());
     if (error != XMLError::XML_SUCCESS) {
-      throw std::runtime_error(class_name + "::save: The file " + source +
-                               "could not be written.");
+      throw std::runtime_error(class_name + "::save: The file " +
+                               source.string() + "could not be written.");
     }
+  }
+
+  /*!
+   * \brief Moves the xml file storing the data to the given destination.
+   * \return true if the move was sucessfull.
+   */
+  bool moveFile(const std::filesystem::path &new_file) {
+    if (std::filesystem::exists(new_file)) {
+      return false;
+    }
+    const std::filesystem::path old_file(source);
+
+    if (std::filesystem::exists(old_file)) {
+      // copy old to new
+      if (!std::filesystem::copy_file(old_file, new_file)) {
+        return false;
+      }
+      // delete old
+      if (!std::filesystem::remove(old_file)) {
+        if (!std::filesystem::remove(new_file)) {
+          // I cant even remove the file I just created??
+          throw std::runtime_error(
+              class_name + "::constructor: I was able to copy from (old) " +
+              old_file.string() + " to (new) " + new_file.string() +
+              " but I was not able to delete the old file. I was not able to "
+              "delete the newly created copy either. This smells like a "
+              "corrupt file system. Make sure to backup your data!");
+        }
+        return false;
+      }
+    } else {
+      // no need to move
+      source = new_file;
+    }
+    save();
+    return true;
+  }
+
+  /*!
+   * \brief Deletes the xml file which stores the data. If save() is called,
+   * The file will created again.
+   * \return true if file could be deleted or did not exist in the first place.
+   * Return false if file still exists.
+   */
+  bool deleteFile() {
+    if (std::filesystem::exists(source)) {
+      return std::filesystem::remove(source);
+    }
+    return true;
   }
 
 private:
@@ -285,8 +335,8 @@ private:
     // decided that it is ok to use default value if data is corrupted.
     if (error != XMLError::XML_SUCCESS && !ignore_read_error &&
         error != XML_NO_TEXT_NODE) {
-      throw std::runtime_error(class_name + "::loadIf: The file " + source +
-                               "had an entry " + name +
+      throw std::runtime_error(class_name + "::loadIf: The file " +
+                               source.string() + "had an entry " + name +
                                " But could not be parsed.");
     }
     return true;
@@ -468,10 +518,10 @@ private:
     // cannot handle these errors -> throw
     if (error == XMLError::XML_ERROR_FILE_COULD_NOT_BE_OPENED) {
       throw std::runtime_error(class_name + "::constructor: The file " +
-                               source + "could not be opened.");
+                               source.string() + "could not be opened.");
     } else if (error == XMLError::XML_ERROR_FILE_READ_ERROR) {
       throw std::runtime_error(class_name + "::constructor: The file " +
-                               source +
+                               source.string() +
                                "could not be read. Maybe XML Syntax was made "
                                "invalide while altering Settingsfile?");
     } else if (settings == nullptr) {
@@ -533,7 +583,7 @@ private:
   /// </Saving methodes>
 
   std::string class_name = "Settings";
-  std::string source;
+  std::filesystem::path source;
 
   Datamap data;
 
