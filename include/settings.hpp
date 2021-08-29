@@ -2,7 +2,6 @@
 #define SETTINGS
 
 #include <tinyxml2.h>
-
 #include <cassert>
 #include <functional>
 #include <iostream>
@@ -16,37 +15,32 @@
 namespace util {
 
 // If you want to support a new type, you must define the load methode for it.
-// The save methode is setText (see savePrimitive()) from tinyxml2.h. You might need to write your
-// own if your Type is not supported.
-// search for <TYPE_SUPPORT> in this file to find all places which need new definitions.
+// The save methode is setText (see savePrimitive()) from tinyxml2.h. You might
+// need to write your own if your Type is not supported. search for
+// <TYPE_SUPPORT> in this file to find all places which need new definitions.
 
 // inspired by http://www.perry.cz/clanky/functions.html
-template <int... Is>
-struct seq {};
+template <int... Is> struct seq {};
 
-template <int N, int... Is>
-struct gen_seq2 : gen_seq2<N - 1, N - 1, Is...> {};
+template <int N, int... Is> struct gen_seq2 : gen_seq2<N - 1, N - 1, Is...> {};
 
-template <int... S>
-struct gen_seq2<0, S...> {
-  typedef seq<S...> type;
-};
+template <int... S> struct gen_seq2<0, S...> { typedef seq<S...> type; };
 
 /*!
- * \brief Virtual base function to be able to store a pointer to different templated children.
+ * \brief Virtual base function to be able to store a pointer to different
+ * templated children.
  */
 class VirtualCall {
- public:
+public:
   /*!
-   * \brief virtual function will be overwritten by children, to call the saved function.
+   * \brief virtual function will be overwritten by children, to call the saved
+   * function.
    */
   virtual void call() = 0;
 };
 
-
-template <typename... ARGS>
-class VariadicFunction : public VirtualCall {
- public:
+template <typename... ARGS> class VariadicFunction : public VirtualCall {
+public:
   /*!
    * \brief Constructor
    * provide the arguments and the pointer to the actual function.
@@ -66,12 +60,9 @@ class VariadicFunction : public VirtualCall {
    * \brief To call the saved function.
    * seq The index-list of the arguments for the function call.
    */
-  template <int... S>
-  void callFunc(seq<S...>) {
-    f(std::get<S>(args)...);
-  }
+  template <int... S> void callFunc(seq<S...>) { f(std::get<S>(args)...); }
 
- private:
+private:
   std::tuple<ARGS...> args;
   std::function<void(ARGS...)> f;
 };
@@ -79,16 +70,18 @@ class VariadicFunction : public VirtualCall {
 struct Data {
   // <TYPE_SUPPORT> Define here your type inside the variant as a pointer.
   // At the moment strings longer than 200 char will get croped!!
-  typedef std::variant<bool*, int*, uint*, float*, double*, std::string*> VariantData;
+  typedef std::variant<bool *, int *, uint *, float *, double *, std::string *>
+      VariantData;
 
-  Data(const VariantData& d, int s) : data(d), size(s) {}
+  Data(const VariantData &d, int s) : data(d), size(s) {}
   VariantData data;
   int size;
 
   std::unique_ptr<VirtualCall> sanitizeFunction_ = nullptr;
 
   /*!
-   * \brief Will call the function provided in the member variable sanitizeFunction_.
+   * \brief Will call the function provided in the member variable
+   * sanitizeFunction_.
    */
   void sanitize() {
     if (sanitizeFunction_) {
@@ -104,12 +97,12 @@ class Settings {
   typedef std::pair<std::string, Data> Datapair;
   typedef std::map<std::string, Data>::iterator DatamapIt;
 
- protected:
+protected:
   /*!
    * \brief Constructor needs the path to the source file.
    * The file does not need to exist.
    */
-  explicit Settings(const std::string& source) : source(source) { loadFile(); }
+  explicit Settings(const std::string &source) : source(source) { loadFile(); }
 
   /*!
    * \brief Registers a membervariable to be saved in to xml format.
@@ -119,10 +112,11 @@ class Settings {
    * N (default = 1) size of array.
    * \param value The pointer to the membervariable, or first element if array.
    * \param name A unique identifier for that variable (used in xml file)
-   * \param ignore_read_error If true this methode will not throw when parsing goes wrong.
+   * \param ignore_read_error If true this methode will not throw when parsing
+   * goes wrong.
    */
   template <class T, size_t N = 1>
-  void put(T& value, const std::string& name, bool ignore_read_error) {
+  void put(T &value, const std::string &name, bool ignore_read_error) {
     putAssert(name);
 
     const auto res = data.emplace(name, Data(&value, N));
@@ -141,26 +135,26 @@ class Settings {
    * ARGS... constant parameters for the sanitizer function.
    * \param value The pointer to the membervariable, or first element if array.
    * \param name A unique identifier for that variable (used in xml file)
-   * \param sanitizeVariableFunction A Function pointer to a function of type void(*f)(T&, ARGS...)
-   * \param args A parameter pack of constant values to be put into the given sanitizer function.
-   * \param ignore_read_error If true this methode will not throw when parsing goes wrong.
+   * \param sanitizeVariableFunction A Function pointer to a function of type
+   * void(*f)(T&, ARGS...) \param args A parameter pack of constant values to be
+   * put into the given sanitizer function. \param ignore_read_error If true
+   * this methode will not throw when parsing goes wrong.
    */
   template <class T, size_t N = 1, typename... ARGS>
-  void put(T& value,
-           const std::string& name,
-           bool ignore_read_error,
-           void (*sanitizeVariableFunction)(T&, ARGS...),
-           const ARGS... args) {
+  void put(T &value, const std::string &name, bool ignore_read_error,
+           void (*sanitizeVariableFunction)(T &, ARGS...), const ARGS... args) {
     putAssert(name);
 
     const std::pair<DatamapIt, bool> res = data.emplace(name, Data(&value, N));
 
-    const std::tuple<T&, ARGS...> all_args =
+    const std::tuple<T &, ARGS...> all_args =
         std::tuple_cat(std::tie(value), std::make_tuple(args...));
 
-    // VariadicFunction<T&, ARGS...> sanitizFunction(all_args, sanitizeVariableFunction);
+    // VariadicFunction<T&, ARGS...> sanitizFunction(all_args,
+    // sanitizeVariableFunction);
     res.first->second.sanitizeFunction_ =
-        std::make_unique<VariadicFunction<T&, ARGS...>>(all_args, sanitizeVariableFunction);
+        std::make_unique<VariadicFunction<T &, ARGS...>>(
+            all_args, sanitizeVariableFunction);
 
     res.first->second.sanitize();
     if (!loadIf(name, ignore_read_error)) {
@@ -168,21 +162,19 @@ class Settings {
     }
   }
 
-  void putAssert(const std::string& name) {
+  void putAssert(const std::string &name) {
     if (name.find(' ') != std::string::npos) {
-      assert(
-          "Please dont use the space character for the name "
-          "of your variable. TinyXml2 doesnt like that." &&
-          false);
+      assert("Please dont use the space character for the name "
+             "of your variable. TinyXml2 doesnt like that." &&
+             false);
     }
 
-    assert(
-        "Settings::put: Each member variable must be named uniquely (second "
-        "parameter)! Only put each variable once!" &&
-        data.find(name) == data.end());
+    assert("Settings::put: Each member variable must be named uniquely (second "
+           "parameter)! Only put each variable once!" &&
+           data.find(name) == data.end());
   }
 
- public:
+public:
   /*!
    * \brief Writes the values into all member variables found in the provided
    * file. Throws if parsing error occured.
@@ -205,10 +197,11 @@ class Settings {
 
     std::vector<std::string> bad_variables;
     for (DatamapIt it = data.begin(); it != data.end(); ++it) {
-      XMLElement* element = settings->FirstChildElement(it->first.c_str());
+      XMLElement *element = settings->FirstChildElement(it->first.c_str());
 
-      assert(("Settings::loadAll: Did not found requested " + it->first).c_str() &&
-             element != nullptr);
+      assert(
+          ("Settings::loadAll: Did not found requested " + it->first).c_str() &&
+          element != nullptr);
 
       const XMLError error = load(element, it);
       if (error != XMLError::XML_SUCCESS) {
@@ -217,12 +210,13 @@ class Settings {
     }
     if (bad_variables.size() > 0) {
       std::string bad = "";
-      for (const auto& str : bad_variables) {
+      for (const auto &str : bad_variables) {
         bad += (bad.length() > 0 ? ", " : "") + str;
       }
       throw std::runtime_error(
           class_name +
-          "::reloadAllFromFile: Failed to read the following variables: " + bad);
+          "::reloadAllFromFile: Failed to read the following variables: " +
+          bad);
     }
   }
 
@@ -246,12 +240,14 @@ class Settings {
     }
     */
 
-    // goes through map and searches for the name in xml, which is probably way slower.
+    // goes through map and searches for the name in xml, which is probably way
+    // slower.
     for (DatamapIt it = data.begin(); it != data.end(); ++it) {
-      XMLElement* element = settings->FirstChildElement(it->first.c_str());
+      XMLElement *element = settings->FirstChildElement(it->first.c_str());
 
-      assert(("Settings::loadAll: Did not found requested " + it->first).c_str() &&
-             element != nullptr);
+      assert(
+          ("Settings::loadAll: Did not found requested " + it->first).c_str() &&
+          element != nullptr);
 
       save(element, it);
     }
@@ -263,7 +259,7 @@ class Settings {
     }
   }
 
- private:
+private:
   /*!
    * \brief registers membervariable
    * if value was found in xml, overwrite member variable with value from xml.
@@ -272,21 +268,23 @@ class Settings {
    * \param ignore_read_error does not throw if true.
    * return true if variable existed and was overwritten.
    */
-  [[nodiscard]] bool loadIf(const std::string& name, bool ignore_read_error) {
+  [[nodiscard]] bool loadIf(const std::string &name, bool ignore_read_error) {
 
     DatamapIt settings_data_it = data.find(name);
     assert(("Settings::loadIf: Did not found requested " + name).c_str() &&
            settings_data_it != data.end());
 
-    XMLElement* xml_element = settings->FirstChildElement(name.c_str());
+    XMLElement *xml_element = settings->FirstChildElement(name.c_str());
     if (xml_element == nullptr) {
       return false;
     }
     const XMLError error = load(xml_element, settings_data_it);
-    // We only throw if we could not parse, but there was data (which is corrupted).
-    // We dont throw if there wasnt data at all: error == XML_NO_TEXT_NODE. (Just use default).
-    // We dont throw if the programmer decided that it is ok to use default value if data is corrupted.
-    if (error != XMLError::XML_SUCCESS && !ignore_read_error && error != XML_NO_TEXT_NODE) {
+    // We only throw if we could not parse, but there was data (which is
+    // corrupted). We dont throw if there wasnt data at all: error ==
+    // XML_NO_TEXT_NODE. (Just use default). We dont throw if the programmer
+    // decided that it is ok to use default value if data is corrupted.
+    if (error != XMLError::XML_SUCCESS && !ignore_read_error &&
+        error != XML_NO_TEXT_NODE) {
       throw std::runtime_error(class_name + "::loadIf: The file " + source +
                                "had an entry " + name +
                                " But could not be parsed.");
@@ -305,31 +303,32 @@ class Settings {
 
   /*!
    * \brief Loads the found value of the (stored) xml in to variable.
-   * \param xml_element Valid pointer to the element which stores the variable (or parent if array).
-   * \param settings_data_it Valid interator to this->data entry (storing pointer type and size)
-   * return XMLError errorflag showing if parsing was successfull.
+   * \param xml_element Valid pointer to the element which stores the variable
+   * (or parent if array). \param settings_data_it Valid interator to this->data
+   * entry (storing pointer type and size) return XMLError errorflag showing if
+   * parsing was successfull.
    */
-  [[nodiscard]] XMLError load(const XMLElement* xml_element, const DatamapIt settings_data_it) {
+  [[nodiscard]] XMLError load(const XMLElement *xml_element,
+                              const DatamapIt settings_data_it) {
 
-    auto load_ = [this](Data::VariantData& variant_data,
-                        const XMLElement* child,
-                        int increment) -> XMLError {
+    auto load_ = [this](Data::VariantData &variant_data,
+                        const XMLElement *child, int increment) -> XMLError {
       XMLError error;
       std::visit(
-          [this, &child, &increment, &error](auto&& variant_data) -> void {
+          [this, &child, &increment, &error](auto &&variant_data) -> void {
             error = loadData(child, variant_data, increment);
           },
           variant_data);
       return error;
     };
 
-
-
     if (settings_data_it->second.size > 1) {
       for (int i = 0; i < settings_data_it->second.size; i++) {
         const std::string child_name = getChildName(i);
-        const XMLElement* child = xml_element->FirstChildElement(child_name.c_str());
-        assert("Settings::load: Child element (Array element) is missing." && child != nullptr);
+        const XMLElement *child =
+            xml_element->FirstChildElement(child_name.c_str());
+        assert("Settings::load: Child element (Array element) is missing." &&
+               child != nullptr);
         if (child != nullptr) {
 
           const XMLError e = load_(settings_data_it->second.data, child, i);
@@ -352,18 +351,20 @@ class Settings {
 
   /// <Loading methodes>
 
-
-  // <TYPE_SUPPORT> Define your own loadYourType methode which loads your Type from XML into the pointer
+  // <TYPE_SUPPORT> Define your own loadYourType methode which loads your Type
+  // from XML into the pointer
 
   /*!
    * \brief Loads stored bool value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
    * \param data Void pointer to member variable or begin of array.
    *        Assumes member variable type to be bool.
-   * \param increment Position in member variable array, or 0 if not array but simple member variable.
-   * return XMLError errorflag showing if parsing was successfull.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, bool* data, int increment) {
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, bool *data,
+                                  int increment) {
     return xml_element->QueryBoolText(data + increment);
   }
 
@@ -372,10 +373,12 @@ class Settings {
    * \param xml_element Valid pointer to the element which stores the variable.
    * \param data Void pointer to member variable or begin of array.
    *        Assumes member variable type to be int.
-   * \param increment Position in member variable array, or 0 if not array but simple member variable.
-   * return XMLError errorflag showing if parsing was successfull.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, int* data, int increment) {
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, int *data,
+                                  int increment) {
     return xml_element->QueryIntText(data + increment);
   }
 
@@ -384,10 +387,12 @@ class Settings {
    * \param xml_element Valid pointer to the element which stores the variable.
    * \param data Void pointer to member variable or begin of array.
    *        Assumes member variable type to be unsigned int.
-   * \param increment Position in member variable array, or 0 if not array but simple member variable.
-   * return XMLError errorflag showing if parsing was successfull.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, uint* data, int increment) {
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, uint *data,
+                                  int increment) {
     return xml_element->QueryUnsignedText(data + increment);
   }
 
@@ -396,10 +401,12 @@ class Settings {
    * \param xml_element Valid pointer to the element which stores the variable.
    * \param data Void pointer to member variable or begin of array.
    *        Assumes member variable type to be float.
-   * \param increment Position in member variable array, or 0 if not array but simple member variable.
-   * return XMLError errorflag showing if parsing was successfull.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, float* data, int increment) {
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, float *data,
+                                  int increment) {
     return xml_element->QueryFloatText(data + increment);
   }
 
@@ -408,10 +415,12 @@ class Settings {
    * \param xml_element Valid pointer to the element which stores the variable.
    * \param data Void pointer to member variable or begin of array.
    *        Assumes member variable type to be double.
-   * \param increment Position in member variable array, or 0 if not array but simple member variable.
-   * return XMLError errorflag showing if parsing was successfull.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, double* data, int increment) {
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, double *data,
+                                  int increment) {
     return xml_element->QueryDoubleText(data + increment);
   }
 
@@ -420,13 +429,14 @@ class Settings {
    * \param xml_element Valid pointer to the element which stores the variable.
    * \param data Void pointer to member variable or begin of array.
    *        Assumes member variable type to be double.
-   * \param increment Position in member variable array, or 0 if not array but simple member variable.
-   * return XMLError errorflag showing if parsing was successfull.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement* xml_element, std::string* data, int increment) {
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::string *data, int increment) {
     return xml_element->QueryStrText(data + increment);
   }
-
 
   /// </Loading methodes>
 
@@ -436,7 +446,8 @@ class Settings {
   void loadFile() {
     XMLError error = settingsDocument.LoadFile(source.c_str());
     if (error != XMLError::XML_SUCCESS) {
-      if (error == XMLError::XML_ERROR_FILE_NOT_FOUND || XMLError::XML_ERROR_EMPTY_DOCUMENT) {
+      if (error == XMLError::XML_ERROR_FILE_NOT_FOUND ||
+          XMLError::XML_ERROR_EMPTY_DOCUMENT) {
         settingsDocument.ClearError();
         settingsDocument.Clear();
         // define root element
@@ -459,31 +470,36 @@ class Settings {
       throw std::runtime_error(class_name + "::constructor: The file " +
                                source + "could not be opened.");
     } else if (error == XMLError::XML_ERROR_FILE_READ_ERROR) {
-      throw std::runtime_error(class_name + "::constructor: The file " + source +
+      throw std::runtime_error(class_name + "::constructor: The file " +
+                               source +
                                "could not be read. Maybe XML Syntax was made "
                                "invalide while altering Settingsfile?");
     } else if (settings == nullptr) {
-      throw std::runtime_error(
-          class_name + "::constructor: An unhandled Error occured: " + std::to_string(error));
+      throw std::runtime_error(class_name +
+                               "::constructor: An unhandled Error occured: " +
+                               std::to_string(error));
     }
   }
 
   /*!
    * \brief Pre stores the value of a member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param settings_data_it Valid interator to this->data entry (storing pointer type and size)
+   * \param settings_data_it Valid interator to this->data entry (storing
+   * pointer type and size)
    */
-  void save(XMLElement* xml_element, DatamapIt settings_data_it) {
+  void save(XMLElement *xml_element, DatamapIt settings_data_it) {
     if (xml_element == nullptr) {
-      xml_element = settingsDocument.NewElement(settings_data_it->first.c_str());
+      xml_element =
+          settingsDocument.NewElement(settings_data_it->first.c_str());
     }
 
     settings_data_it->second.sanitize();
 
     std::visit(
-        [this, &xml_element, &settings_data_it](auto&& variant_data) -> void {
+        [this, &xml_element, &settings_data_it](auto &&variant_data) -> void {
           using T = std::decay_t<decltype(variant_data)>;
-          savePrimitive(xml_element, variant_data, settings_data_it->second.size);
+          savePrimitive(xml_element, variant_data,
+                        settings_data_it->second.size);
         },
         settings_data_it->second.data);
   }
@@ -494,15 +510,17 @@ class Settings {
    * \brief Pre stores the value of a member variable with type T.
    * T Type of the to be stored variable
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param settings_data_it Valid interator to this->data entry (storing pointer type and size)
+   * \param settings_data_it Valid interator to this->data entry (storing
+   * pointer type and size)
    */
   template <class T>
-  void savePrimitive(XMLElement* xml_element, T data_ptr, int size) {
+  void savePrimitive(XMLElement *xml_element, T data_ptr, int size) {
 
     if (size > 1) {
       xml_element->DeleteChildren();
       for (int i = 0; i < size; i++) {
-        XMLElement* child = xml_element->InsertNewChildElement(getChildName(i).c_str());
+        XMLElement *child =
+            xml_element->InsertNewChildElement(getChildName(i).c_str());
         child->SetText(*data_ptr++);
         xml_element->InsertEndChild(child);
       }
@@ -520,8 +538,8 @@ class Settings {
   Datamap data;
 
   XMLDocument settingsDocument;
-  XMLNode* settings = nullptr;
+  XMLNode *settings = nullptr;
 };
-}  // namespace util
+} // namespace util
 
 #endif

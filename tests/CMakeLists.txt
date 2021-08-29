@@ -11,7 +11,7 @@ if( Boost_FOUND )
   add_executable(test_settings test_settings.cpp)
 
   target_link_libraries(test_settings
-                        ${TinyXML2_LIBRARIES}
+                        tinyxml2
                         settings_lib
                         ${Boost_FILESYSTEM_LIBRARY}
                         ${Boost_SYSTEM_LIBRARY}
