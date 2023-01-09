@@ -33,9 +33,8 @@ You can define a sanity check function for the variable.
     * `sudo make install`
  3. Include the library (header only) using the provided CMakeLists.txt or just include the relative path: 
     * e.g: `#include "settings/include/settings.hpp"`
- 4. (This step is not necessary) In the build folder there is a bash script to build and run the unit tests for tinyxml2 and the Settings class.
+ 4. (This step is not necessary) There is a bash script to build and run the unit tests for tinyxml2 and the Settings class.
     * requires boost to be installed (works with 1.65.1)
-    * `cd build/`
     * `./buildAndRunTests.sh`
  5. (This step is not necessary) There is an example in example.cpp.
     * build it: `g++ -std=gnu++17 src/tinyxml2/tinyxml2.cpp example.cpp -o run_example`
@@ -46,8 +45,10 @@ You can define a sanity check function for the variable.
   ## Runntime Errors:
  *  The following functions throw runtime errors (Happens when parsing xml file goes wrong.)
     * `put<T>(T&, std::string&, bool)` here the throw can be supressed setting *bool* to true. Happens if the file had an entry of that variable but was not able to read it. If supressed or catched, the member will have its default value.
-    * `reloadAllFromFile()`. Will try to load every found member variable in the file. Throws if at least one variable was found (had an entry) but could not be parsed. If you catch and continue, all variables which could be parsed will have the parsed value, others will have their old value.
-    * `save()`. Will throw if the file could not be parsed or written. If you catch, you should probably not use the file if it got created.
+    * `reloadAllFromFile()`. Will try to load every found member variable in the file given before. Throws if at least one variable was found (had an entry) but could not be parsed. If you catch and continue, all variables which could be parsed will have the parsed value, others will have their old value.
+    * `reloadAllFromFile("path/to/data.xml")`. Will try to load every found member variable in the given file. Throws if at least one variable was found (had an entry) but could not be parsed. If you catch and continue, all variables which could be parsed will have the parsed value, others will have their old value.
+    * `save()`. Will throw if the file given before could not be parsed or written. If you catch, you should probably not use the file if it got created.
+    * `save("path/to/data.xml")`. Will throw if the file could not be parsed or written. If you catch, you should probably not use the file if it got created.
     * `deleteFile()`. Uses std::filesystem to delete the xml file storing the classes data. This might throw an exception on underlying OS API errors.
     * `moveFile()`. Uses std::filesystem to move the xml file storing the classes data. This might throw an exception on underlying OS API errors.
 
@@ -69,8 +70,8 @@ class YourClass : public util::Settings{...
 double height = 200.;
 static constexpr double MIN_HEIGHT = 10.;
 
-// provide a path to the config file at construction time
-YourClass(const std::string source_file_name) : Settings(source_file_name) {
+
+YourClass() {
 	// inside your class constructor mark the variable to be stored
 	// EITHER LIKE THIS
 	put(height, "unique_key_height");
@@ -88,7 +89,7 @@ YourClass(const std::string source_file_name) : Settings(source_file_name) {
 // Somewhere outside the class:
 YourClass your_class("settings/YourClass.xml");
 // You can trigger to save all the current values into the config with
-your_class.save();
+your_class.save("path/to/file"); // path to file must be given only once
 
 // You can force a reload of all values from config with
 your_class.reloadAllFromFile();

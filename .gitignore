@@ -46,5 +46,6 @@ CTestTestfile.cmake
 Release/src/
 Debug/src/
 build/
+testbuild/
 *.xml
 run_example
