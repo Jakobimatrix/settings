@@ -81,7 +81,7 @@ class VariadicFunction : public VirtualCall {
 struct Data {
   // <TYPE_SUPPORT> Define here your type inside the variant as a pointer.
   // At the moment strings longer than 200 char will get croped!!
-  typedef std::variant<bool *, int *, uint *, float *, double *, std::string *> VariantData;
+  typedef std::variant<bool *, int *, unsigned int *, float *, double *, std::string *> VariantData;
 
   Data(const VariantData &d, int s) : data(d), size(s) {}
   VariantData data;
@@ -276,7 +276,7 @@ class Settings {
       save(element, it);
     }
 
-    XMLError error = settingsDocument.SaveFile(source.c_str());
+    XMLError error = settingsDocument.SaveFile(source.string().c_str());
     if (error != XMLError::XML_SUCCESS) {
       throw std::runtime_error(class_name + "::save: The file " +
                                source.string() + "could not be written.");
@@ -467,7 +467,7 @@ class Settings {
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, uint *data, int increment) {
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, unsigned int *data, int increment) {
     return xml_element->QueryUnsignedText(data + increment);
   }
 
@@ -516,8 +516,7 @@ class Settings {
    * \brief Read the xml file if it exists.
    */
   void loadFile() {
-    XMLError error = source.c_str() != "" ? settingsDocument.LoadFile(source.c_str())
-                                          : XMLError::XML_ERROR_FILE_NOT_FOUND;
+    XMLError error = source.empty() ? XMLError::XML_ERROR_FILE_NOT_FOUND : settingsDocument.LoadFile(source.string().c_str());
     if (error != XMLError::XML_SUCCESS) {
       if (error == XMLError::XML_ERROR_FILE_NOT_FOUND || XMLError::XML_ERROR_EMPTY_DOCUMENT) {
         settingsDocument.ClearError();
