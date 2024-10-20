@@ -46,10 +46,10 @@ namespace tt = boost::test_tools;
 
 namespace util {
 
-class ExampleSettings : public Settings {
+class ExampleSettings : public Settings<> {
  public:
   ExampleSettings(const std::string &source_file_name)
-      : Settings(source_file_name) {
+      : Settings<>(source_file_name) {
     // introduce all membervariables which shall be saved.
     const bool dont_throw_bad_parsing = true;
     put<bool>(exampleBool, EXAMPLE_BOOL, dont_throw_bad_parsing);
@@ -70,10 +70,10 @@ class ExampleSettings : public Settings {
   std::string exampleStr = DEF_STR[0];
 };
 
-class ExampleSettingsArray : public Settings {
+class ExampleSettingsArray : public Settings<> {
  public:
   ExampleSettingsArray(const std::string &source_file_name)
-      : Settings(source_file_name) {
+      : Settings<>(source_file_name) {
     // introduce all membervariables which shall be saved.
     const bool dont_throw_bad_parsing = true;
     put<bool, NUM_VALS>(b_array[0], EXAMPLE_ARRAY_B, dont_throw_bad_parsing);
@@ -374,10 +374,10 @@ void saneMinMax(T &var, T min, T max) {
   }
 }
 
-class ExampleSaneSettings : public util::Settings {
+class ExampleSaneSettings : public util::Settings<> {
  public:
   ExampleSaneSettings(const std::string &source_file_name)
-      : Settings(source_file_name) {
+      : Settings<>(source_file_name) {
     initSettinngs();
   }
 

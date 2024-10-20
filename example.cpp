@@ -15,10 +15,10 @@ void saneMinMax(T& var, T min, T max) {
   }
 }
 
-class ExampleClass : public util::Settings {
+class ExampleClass : public util::Settings<> {
  public:
   ExampleClass(const std::string& source_file_name)
-      : Settings(source_file_name) {
+      : Settings<>(source_file_name) {
     initSettings();
   }
 

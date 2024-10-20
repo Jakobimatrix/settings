@@ -4,104 +4,56 @@
 #include <tinyxml2.h>
 
 #include <cassert>
+#include <deque>
 #include <filesystem>
 #include <functional>
 #include <iostream>
+#include <list>
 #include <map>
 #include <memory>
+#include <queue>
+#include <set>
+#include <stack>
 #include <stdexcept>
 #include <tuple>
+#include <unordered_map>
+#include <unordered_set>
+#include <utils/templates/variadicFunction.hpp>
 #include <variant>
 #include <vector>
-
-namespace util {
 
 // If you want to support a new type, you must define the load methode for it.
 // The save methode is setText (see savePrimitive()) from tinyxml2.h. You might
 // need to write your own if your Type is not supported. search for
 // <TYPE_SUPPORT> in this file to find all places which need new definitions.
 
-// inspired by http://www.perry.cz/clanky/functions.html
-template <int... Is>
-struct seq {};
+namespace util {
 
-template <int N, int... Is>
-struct gen_seq2 : gen_seq2<N - 1, N - 1, Is...> {};
-
-template <int... S>
-struct gen_seq2<0, S...> {
-  typedef seq<S...> type;
-};
-
-/*!
- * \brief Virtual base function to be able to store a pointer to different
- * templated children.
- */
-class VirtualCall {
- public:
-  /*!
-   * \brief virtual function will be overwritten by children, to call the saved
-   * function.
-   */
-  virtual void call() = 0;
-};
-
-template <typename... ARGS>
-class VariadicFunction : public VirtualCall {
- public:
-  /*!
-   * \brief Constructor
-   * provide the arguments and the pointer to the actual function.
-   * \param args all arguments for the to be called function as std::tuple in
-   * correct order.
-   * \param Pointer to the to be called function.
-   */
-  VariadicFunction(std::tuple<ARGS...> args, void (*f)(ARGS...))
-      : args(args), f(f) {}
-
-  /*!
-   * \brief To call the saved function without the need of arguments.
-   */
-  void call() override { callFunc(typename gen_seq2<sizeof...(ARGS)>::type()); }
-
-  /*!
-   * \brief To call the saved function.
-   * seq The index-list of the arguments for the function call.
-   */
-  template <int... S>
-  void callFunc(seq<S...>) {
-    f(std::get<S>(args)...);
-  }
-
- private:
-  std::tuple<ARGS...> args;
-  std::function<void(ARGS...)> f;
-};
-
-struct Data {
-  // <TYPE_SUPPORT> Define here your type inside the variant as a pointer.
-  // At the moment strings longer than 200 char will get croped!!
-  typedef std::variant<bool *, int *, unsigned int *, float *, double *, std::string *> VariantData;
-
-  Data(const VariantData &d, int s) : data(d), size(s) {}
-  VariantData data;
-  int size;
-
-  std::unique_ptr<VirtualCall> sanitizeFunction_ = nullptr;
-
-  /*!
-   * \brief Will call the function provided in the member variable
-   * sanitizeFunction_.
-   */
-  void sanitize() {
-    if (sanitizeFunction_) {
-      sanitizeFunction_->call();
-    }
-  }
-};
-
+// <TYPE_SUPPORT>
+// Base types: bool*, int*, unsigned int*, float*, double*, std::string*
+// (At the moment strings longer than 200 char will get croped!!)
+// StlContainer: All
 using namespace tinyxml2;
+template <typename VariantData = std::variant<bool *, int *, unsigned int *, float *, double *, std::string *>>
 class Settings {
+
+  struct Data {
+    Data(const VariantData &d, int s) : data(d), size(s) {}
+    VariantData data;
+    int size;
+
+    std::unique_ptr<VirtualCall> sanitizeFunction_ = nullptr;
+
+    /*!
+     * \brief Will call the function provided in the member variable
+     * sanitizeFunction_.
+     */
+    void sanitize() {
+      if (sanitizeFunction_) {
+        sanitizeFunction_->call();
+      }
+    }
+  };
 
   typedef std::map<std::string, Data> Datamap;
   typedef std::pair<std::string, Data> Datapair;
@@ -390,9 +342,7 @@ class Settings {
    */
   [[nodiscard]] XMLError load(const XMLElement *xml_element, const DatamapIt settings_data_it) {
 
-    auto load_ = [this](Data::VariantData &variant_data,
-                        const XMLElement *child,
-                        int increment) -> XMLError {
+    auto load_ = [this](VariantData &variant_data, const XMLElement *child, int increment) -> XMLError {
       XMLError error;
       std::visit(
           [this, &child, &increment, &error](auto &&variant_data) -> void {
@@ -510,13 +460,21 @@ class Settings {
     return xml_element->QueryStrText(data + increment);
   }
 
+  // todo handle std::types
+  template <class T1>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, T1 *data, int increment) {
+    return XMLError::XML_ERROR_FILE_READ_ERROR;
+  }
+
   /// </Loading methodes>
 
   /*!
    * \brief Read the xml file if it exists.
    */
   void loadFile() {
-    XMLError error = source.empty() ? XMLError::XML_ERROR_FILE_NOT_FOUND : settingsDocument.LoadFile(source.string().c_str());
+    XMLError error = source.empty()
+                         ? XMLError::XML_ERROR_FILE_NOT_FOUND
+                         : settingsDocument.LoadFile(source.string().c_str());
     if (error != XMLError::XML_SUCCESS) {
       if (error == XMLError::XML_ERROR_FILE_NOT_FOUND || XMLError::XML_ERROR_EMPTY_DOCUMENT) {
         settingsDocument.ClearError();
@@ -596,6 +554,42 @@ class Settings {
     settings->InsertEndChild(xml_element);
   }
 
+  template <class T>
+  void savePrimitive(XMLElement *xml_element, std::vector<T> *data, int size) {}
+
+  template <class T>
+  void savePrimitive(XMLElement *xml_element, std::list<T> *data, int size) {}
+
+  template <class T>
+  void savePrimitive(XMLElement *xml_element, std::set<T> *data, int size) {}
+
+  template <class T>
+  void savePrimitive(XMLElement *xml_element, std::multiset<T> *data, int size) {}
+
+  template <class T>
+  void savePrimitive(XMLElement *xml_element, std::unordered_set<T> *data, int size) {}
+
+  template <class T>
+  void savePrimitive(XMLElement *xml_element, std::queue<T> *data, int size) {}
+
+  template <class T>
+  void savePrimitive(XMLElement *xml_element, std::deque<T> *data, int size) {}
+
+  template <class T>
+  void savePrimitive(XMLElement *xml_element, std::stack<T> *data, int size) {}
+
+  template <class T1, class T2>
+  void savePrimitive(XMLElement *xml_element, std::map<T1, T2> *data, int size) {}
+
+  template <class T1, class T2>
+  void savePrimitive(XMLElement *xml_element, std::multimap<T1, T2> *data, int size) {}
+
+  template <class T1, class T2>
+  void savePrimitive(XMLElement *xml_element, std::unordered_map<T1, T2> *data, int size) {}
+
+  template <class T1, class T2>
+  void savePrimitive(XMLElement *xml_element, std::pair<T1, T2> *data, int size) {}
+
   /// </Saving methodes>
 
   std::string class_name = "Settings";
@@ -606,6 +600,7 @@ class Settings {
   XMLDocument settingsDocument;
   XMLNode *settings = nullptr;
 };
+
 }  // namespace util
 
 #endif

@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
-# Set the policy to avoid warnings about project versioning
-cmake_policy(SET CMP0048 NEW)
 
-project(Settings VERSION 1.0.0)
+set(SETTINGS_LIB_VERSION "1.0.0")
+
 
 if(NOT "${CMAKE_CXX_STANDARD}")
   set(CMAKE_CXX_STANDARD 17)
@@ -18,15 +17,20 @@ if(NOT tinyxml2_FOUND)
   )
 endif()
 
-add_library(settings_lib INTERFACE)
+add_library(settings_lib_${SETTINGS_LIB_VERSION} INTERFACE)
 
-target_link_libraries(settings_lib INTERFACE
-    tinyxml2)
+# Create an alias with the version in its name
+add_library(settings_lib ALIAS settings_lib_${SETTINGS_LIB_VERSION})
 
-target_include_directories(settings_lib
+target_link_libraries(settings_lib_${SETTINGS_LIB_VERSION} INTERFACE
+    tinyxml2
+    utils_lib_0.0.1)
+
+target_include_directories(settings_lib_${SETTINGS_LIB_VERSION}
       INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-option(TEST_SETTINGS "Build tests for settings_lib and tinyxml2" FALSE)
+option(TEST_SETTINGS "Build Boost Tests for settings_lib and tinyxml2" FALSE)
+
 if(TEST_SETTINGS)
   enable_testing()
   add_subdirectory(tests)
