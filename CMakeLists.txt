@@ -17,6 +17,7 @@ if(NOT tinyxml2_FOUND)
   )
 endif()
 
+add_subdirectory(src/utils)
 add_library(settings_lib_${SETTINGS_LIB_VERSION} INTERFACE)
 
 # Create an alias with the version in its name

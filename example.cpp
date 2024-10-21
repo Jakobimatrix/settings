@@ -1,7 +1,9 @@
 #include <locale>
 #include <string>
+#include <vector>
 
 #include "include/settings.hpp"
+
 
 // This function is used to sanitize a user input. The first input parameter
 // of every sanitizer function must be a reference to the variable in
@@ -15,10 +17,12 @@ void saneMinMax(T& var, T min, T max) {
   }
 }
 
-class ExampleClass : public util::Settings<> {
+using ExampleSettings =
+    util::Settings<std::variant<bool*, int*, float*, double*, std::string*, std::vector<unsigned>*>>;
+class ExampleClass : public ExampleSettings {
  public:
   ExampleClass(const std::string& source_file_name)
-      : Settings<>(source_file_name) {
+      : ExampleSettings(source_file_name) {
     initSettings();
   }
 
@@ -35,8 +39,12 @@ class ExampleClass : public util::Settings<> {
               << S_STRING_ID << +": " << exampleString << "\n"
               << ARRAY_ID << +": "
               << "\n";
-    for (size_t i = 0; i < NUM_D_IN_ARRAY; i++) {
+    for (size_t i = 0; i < NUM_D_IN_ARRAY; ++i) {
       std::cout << "\t[" << i << "] " << std::to_string(example_array[i]) << "\n";
+    }
+    std::cout << "\n" << VECTOR_ID << ":\n";
+    for (size_t i = 0; i < example_vector.size(); ++i) {
+      std::cout << "\t[" << i << "] " << std::to_string(example_vector[i]) << "\n";
     }
     std::cout << "------</ExampleClass>------" << std::endl;
   }
@@ -73,17 +81,21 @@ class ExampleClass : public util::Settings<> {
 
     // Strings can be saved too.
     put(exampleString, S_STRING_ID, dont_throw_bad_parsing);
+
+    // most of the stl containers can be saved. They can also be combined with an array. Or an auto sanitize function.
+    put(example_vector, VECTOR_ID, dont_throw_bad_parsing);
   }
 
   bool exampleBool = true;
   int exampleInt = 42;
-  float exampleFloat = 3.141592653589793f;
-  double exampleDouble = 3.141592653589793;
+  float exampleFloat = 3.1415927f;
+  double exampleDouble = 3.1415926535897931;
 
   std::string exampleString = "This is a string123$%&/()?=*ÄÜÖ";
 
   static constexpr int NUM_D_IN_ARRAY = 3;
   std::array<double, NUM_D_IN_ARRAY> example_array;
+  std::vector<unsigned> example_vector = {{3, 2, 6, 8}};
 
   static constexpr int MAX_I = 10;
   static constexpr int MIN_I = 0;
@@ -96,6 +108,7 @@ class ExampleClass : public util::Settings<> {
   const std::string D_STRING_ID = "even_more_nearly_pi";
   const std::string ARRAY_ID = "You_should_probably_choose_a_short_name";
   const std::string S_STRING_ID = "string";
+  const std::string VECTOR_ID = "stlSupport";
 };
 
 int main() {

@@ -14,6 +14,7 @@ You can define a sanity check function for the variable.
  * double
  * std::string // strings longer than 200 characters will be cropped!! see *src/tinyxml2/tinyxml2.h BUF_SIZE;
  * arrays and (const size) vectors of thouse types
+ * most stl container
  * In generel every class/structure where the members are stored tightly packed in an array like:
      * Eigen: `put<double, 3>(eigen_vactor3d.x(), "eigen_vector3d")`
      * glm:   `put<float, 3>(glm_vec3[0], "glm_vec3d")` 
@@ -21,6 +22,7 @@ You can define a sanity check function for the variable.
  
 ## Dependencies:
  * [tinyxml2](https://github.com/leethomason/tinyxml2). (included as submodule)
+ * [utils](https://github.com/Jakobimatrix/utils). (included as submodule)
  
 ## How to use:
  1. Clone the repository and update the submodule
@@ -37,8 +39,8 @@ You can define a sanity check function for the variable.
     * requires boost to be installed (works with 1.65.1)
     * `./buildAndRunTests.sh`
  5. (This step is not necessary) There is an example in example.cpp.
-    * build it: `g++ -std=gnu++17 src/tinyxml2/tinyxml2.cpp example.cpp -o run_example`
-    * have a look at it
+    * build it: `g++ -std=gnu++17 -I src/utils/include src/tinyxml2/tinyxml2.cpp example.cpp -o run_example`
+    * have a look at `example.cpp`
     * then run it with `./run_example`
  6. Make sure to define yor local environment using `#include <local.h>`. E.g defining `std::locale("C");` To make sure that floating point numbers always get stored with the same decimal seperator. Otherwise different environments might use different seperators!
     
@@ -64,9 +66,10 @@ void mustBeAtLeast(T& var, T min){
 }
 
 // inherit from Settings
-class YourClass : public util::Settings{...
+using MySettingsType = util::Settings <std::variant<int*, ... /*Add the types you want to save here as Pointers*/, std::map<std::string, int>*,...>>
+class YourClass : public MySettingsType{...
 
-// have a member variable
+// have a member variable where YOU have full control over. No Pointer!
 double height = 200.;
 static constexpr double MIN_HEIGHT = 10.;
 
@@ -87,9 +90,9 @@ YourClass() {
 };
 	
 // Somewhere outside the class:
-YourClass your_class("settings/YourClass.xml");
+YourClass your_class;
 // You can trigger to save all the current values into the config with
-your_class.save("path/to/file"); // path to file must be given only once
+your_class.save("path/to/file");
 
 // You can force a reload of all values from config with
 your_class.reloadAllFromFile();

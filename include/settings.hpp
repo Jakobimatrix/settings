@@ -11,9 +11,7 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <queue>
 #include <set>
-#include <stack>
 #include <stdexcept>
 #include <tuple>
 #include <unordered_map>
@@ -55,9 +53,9 @@ class Settings {
     }
   };
 
-  typedef std::map<std::string, Data> Datamap;
-  typedef std::pair<std::string, Data> Datapair;
-  typedef std::map<std::string, Data>::iterator DatamapIt;
+  using Datamap = typename std::map<std::string, Data>;
+  using Datapair = typename std::pair<std::string, Data>;
+  using DatamapIt = typename std::map<std::string, Data>::iterator;
 
  public:
   Settings() { loadFile(); }
@@ -460,11 +458,183 @@ class Settings {
     return xml_element->QueryStrText(data + increment);
   }
 
-  // todo handle std::types
-  template <class T1>
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, T1 *data, int increment) {
-    return XMLError::XML_ERROR_FILE_READ_ERROR;
+  template <class VectorContainer>
+  [[nodiscard]] XMLError loadVectorData(const XMLElement *xml_element,
+                                        VectorContainer *data_ptr,
+                                        int increment) {
+    std::advance(data_ptr, increment);
+
+    int i = 0;
+    std::string child_name = getChildName(i++);
+    const XMLElement *child = xml_element->FirstChildElement(child_name.c_str());
+    std::vector<const XMLElement *> children;
+    while (child != nullptr) {
+      children.push_back(child);
+      child_name = getChildName(i++);
+      child = xml_element->FirstChildElement(child_name.c_str());
+    }
+    data_ptr->resize(children.size());
+
+    auto it = data_ptr->begin();
+    for (const XMLElement *c : children) {
+      XMLError error = loadData(c, &(*it), 0);
+      if (error != XMLError::XML_SUCCESS) {
+        return error;
+      }
+      std::advance(it, 1);
+    }
+    return XMLError::XML_SUCCESS;
   }
+
+  template <class T>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::vector<T> *data_ptr,
+                                  int increment) {
+    return loadVectorData(xml_element, data_ptr, increment);
+  }
+
+
+  template <class T>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, std::list<T> *data_ptr, int increment) {
+    return loadVectorData(xml_element, data_ptr, increment);
+  }
+
+  template <template <typename> class SetContainer, typename T>
+  [[nodiscard]] XMLError loadSetData(const XMLElement *xml_element,
+                                     SetContainer<T> *data_ptr,
+                                     int increment) {
+    std::advance(data_ptr, increment);
+
+    int i = 0;
+    data_ptr->clear();
+    auto insertion_hint = data_ptr->begin();
+    std::string child_name = getChildName(i++);
+    const XMLElement *child = xml_element->FirstChildElement(child_name.c_str());
+    while (child != nullptr) {
+      T temp;
+      XMLError error = loadData(child, &temp, 0);
+      if (error != XMLError::XML_SUCCESS) {
+        return error;
+      }
+      insertion_hint = data_ptr->insert(insertion_hint, temp);
+      child_name = getChildName(i++);
+      child = xml_element->FirstChildElement(child_name.c_str());
+    }
+
+    return XMLError::XML_SUCCESS;
+  }
+
+  template <class T>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, std::set<T> *data_ptr, int increment) {
+    return loadSetData(xml_element, data_ptr, increment);
+  }
+
+  template <class T>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::multiset<T> *data_ptr,
+                                  int increment) {
+    return loadSetData(xml_element, data_ptr, increment);
+  }
+
+  template <class T>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::unordered_set<T> *data_ptr,
+                                  int increment) {
+    return loadSetData(xml_element, data_ptr, increment);
+  }
+
+  template <template <typename, typename> class MapContainer, typename T1, typename T2>
+  [[nodiscard]] XMLError loadMapData(const XMLElement *xml_element,
+                                     MapContainer<T1, T2> *data_ptr,
+                                     int increment) {
+    std::advance(data_ptr, increment);
+
+    int i = 0;
+    data_ptr->clear();
+    std::string child_name = getChildName(i++);
+    const std::string child_name_value = child_name;
+    const XMLElement *childKey = xml_element->FirstChildElement(child_name.c_str());
+    auto insertion_hint = data_ptr->begin();
+
+    while (childKey != nullptr) {
+      T1 key;
+      XMLError error = loadData(childKey, &key, 0);
+      if (error != XMLError::XML_SUCCESS) {
+        return error;
+      }
+      const XMLElement *childValue =
+          childKey->FirstChildElement(child_name_value.c_str());
+      if (childValue == nullptr) {
+        return XML_ERROR_PARSING;
+      }
+      T2 value;
+      error = loadData(childValue, &value, 0);
+      if (error != XMLError::XML_SUCCESS) {
+        return error;
+      }
+      insertion_hint = data_ptr->insert(insertion_hint, {key, value});
+      child_name = getChildName(i++);
+      childKey = xml_element->FirstChildElement(child_name.c_str());
+    }
+
+    return XMLError::XML_SUCCESS;
+  }
+
+  template <class T1, class T2>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::map<T1, T2> *data_ptr,
+                                  int increment) {
+    return loadMapData(xml_element, data_ptr, increment);
+  }
+  template <class T1, class T2>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::multimap<T1, T2> *data_ptr,
+                                  int increment) {
+    return loadMapData(xml_element, data_ptr, increment);
+  }
+
+  template <class T1, class T2>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::unordered_map<T1, T2> *data_ptr,
+                                  int increment) {
+    return loadMapData(xml_element, data_ptr, increment);
+  }
+
+  template <class T1, class T2>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::unordered_multimap<T1, T2> *data_ptr,
+                                  int increment) {
+    return loadMapData(xml_element, data_ptr, increment);
+  }
+
+  template <class T1, class T2>
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::pair<T1, T2> *data_ptr,
+                                  int increment) {
+    std::advance(data_ptr, increment);
+
+    int i = 0;
+
+    const XMLElement *childFirst =
+        xml_element->FirstChildElement(getChildName(0).c_str());
+    const XMLElement *childSecond =
+        xml_element->FirstChildElement(getChildName(1).c_str());
+
+    if (childFirst == nullptr || childSecond == nullptr) {
+      return XML_ERROR_PARSING;
+    }
+    XMLError error = loadData(childFirst, &(data_ptr->first), 0);
+    if (error != XMLError::XML_SUCCESS) {
+      return error;
+    }
+    error = loadData(childSecond, &(data_ptr->second), 0);
+    if (error != XMLError::XML_SUCCESS) {
+      return error;
+    }
+    return XMLError::XML_SUCCESS;
+  }
+
+
 
   /// </Loading methodes>
 
@@ -523,7 +693,6 @@ class Settings {
 
     std::visit(
         [this, &xml_element, &settings_data_it](auto &&variant_data) -> void {
-          using T = std::decay_t<decltype(variant_data)>;
           savePrimitive(xml_element, variant_data, settings_data_it->second.size);
         },
         settings_data_it->second.data);
@@ -532,11 +701,11 @@ class Settings {
   /// <Saving methodes>
 
   /*!
-   * \brief Pre stores the value of a member variable with type T.
-   * T Type of the to be stored variable
+   * \brief Stores the value of a member variable with basic type T.
+   * \tparam T Type of the to be stored variable
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param settings_data_it Valid interator to this->data entry (storing
-   * pointer type and size)
+   * \param data_ptr The Pointer to the Data to be stored
+   * \param int The size of the possible array (1 if no array)
    */
   template <class T>
   void savePrimitive(XMLElement *xml_element, T data_ptr, int size) {
@@ -554,41 +723,155 @@ class Settings {
     settings->InsertEndChild(xml_element);
   }
 
-  template <class T>
-  void savePrimitive(XMLElement *xml_element, std::vector<T> *data, int size) {}
+  /*!
+   * \brief Stores the value of a member variable with StlContainer type Container<T>.
+   * \tparam T Type of the to be stored variable
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data_ptr The Pointer to the Data  container to be stored
+   * \param int The size of the possible array (1 if no array)
+   */
+  template <typename Container>
+  void saveContainer(XMLElement *xml_element, Container *data_ptr, int size) {
+
+    auto save1Container = [this](XMLElement *parent, Container *data_ptr) {
+      parent->DeleteChildren();
+      int i = 0;
+      for (const auto &d : *data_ptr) {
+        XMLElement *child = parent->InsertNewChildElement(getChildName(i++).c_str());
+        child->SetText(d);
+        parent->InsertEndChild(child);
+      }
+    };
+
+    if (size > 1) {
+      xml_element->DeleteChildren();
+      for (int i = 0; i < size; i++) {
+        XMLElement *child = xml_element->InsertNewChildElement(getChildName(i).c_str());
+        save1Container(child, data_ptr++);
+        xml_element->InsertEndChild(child);
+      }
+
+    } else {
+      save1Container(xml_element, data_ptr);
+    }
+
+    settings->InsertEndChild(xml_element);
+  }
+
+  /*!
+   * \brief Stores the value of a member variable with StlContainer type Container<T1, T2>.
+   * \tparam T Type of the to be stored variable
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data_ptr The Pointer to the Data  container to be stored
+   * \param int The size of the possible array (1 if no array)
+   */
+  template <typename Container>
+  void saveMap(XMLElement *xml_element, Container *data_ptr, int size) {
+
+    auto save1Container = [this](XMLElement *parent, Container *data_ptr) {
+      parent->DeleteChildren();
+      int i = 0;
+      for (const auto &[key, value] : *data_ptr) {
+        XMLElement *child = parent->InsertNewChildElement(getChildName(i++).c_str());
+        child->SetText(key);
+        XMLElement *childValue = child->InsertNewChildElement(getChildName(0).c_str());
+        childValue->SetText(value);
+        child->InsertEndChild(childValue);
+        parent->InsertEndChild(child);
+      }
+    };
+
+    if (size > 1) {
+      xml_element->DeleteChildren();
+      for (int i = 0; i < size; i++) {
+        XMLElement *child = xml_element->InsertNewChildElement(getChildName(i).c_str());
+        save1Container(child, data_ptr++);
+        xml_element->InsertEndChild(child);
+      }
+
+    } else {
+      save1Container(xml_element, data_ptr);
+    }
+    settings->InsertEndChild(xml_element);
+  }
 
   template <class T>
-  void savePrimitive(XMLElement *xml_element, std::list<T> *data, int size) {}
+  void savePrimitive(XMLElement *xml_element, std::vector<T> *data_ptr, int size) {
+    saveContainer(xml_element, data_ptr, size);
+  }
 
   template <class T>
-  void savePrimitive(XMLElement *xml_element, std::set<T> *data, int size) {}
+  void savePrimitive(XMLElement *xml_element, std::list<T> *data_ptr, int size) {
+    saveContainer(xml_element, data_ptr, size);
+  }
 
   template <class T>
-  void savePrimitive(XMLElement *xml_element, std::multiset<T> *data, int size) {}
+  void savePrimitive(XMLElement *xml_element, std::set<T> *data_ptr, int size) {
+    saveContainer(xml_element, data_ptr, size);
+  }
 
   template <class T>
-  void savePrimitive(XMLElement *xml_element, std::unordered_set<T> *data, int size) {}
+  void savePrimitive(XMLElement *xml_element, std::multiset<T> *data_ptr, int size) {
+    saveContainer(xml_element, data_ptr, size);
+  }
 
   template <class T>
-  void savePrimitive(XMLElement *xml_element, std::queue<T> *data, int size) {}
-
-  template <class T>
-  void savePrimitive(XMLElement *xml_element, std::deque<T> *data, int size) {}
-
-  template <class T>
-  void savePrimitive(XMLElement *xml_element, std::stack<T> *data, int size) {}
+  void savePrimitive(XMLElement *xml_element, std::unordered_set<T> *data_ptr, int size) {
+    saveContainer(xml_element, data_ptr, size);
+  }
 
   template <class T1, class T2>
-  void savePrimitive(XMLElement *xml_element, std::map<T1, T2> *data, int size) {}
+  void savePrimitive(XMLElement *xml_element, std::map<T1, T2> *data_ptr, int size) {
+    saveMap(xml_element, data_ptr, size);
+  }
+  template <class T1, class T2>
+  void savePrimitive(XMLElement *xml_element, std::multimap<T1, T2> *data_ptr, int size) {
+    saveMap(xml_element, data_ptr, size);
+  }
 
   template <class T1, class T2>
-  void savePrimitive(XMLElement *xml_element, std::multimap<T1, T2> *data, int size) {}
+  void savePrimitive(XMLElement *xml_element, std::unordered_map<T1, T2> *data_ptr, int size) {
+    saveMap(xml_element, data_ptr, size);
+  }
 
   template <class T1, class T2>
-  void savePrimitive(XMLElement *xml_element, std::unordered_map<T1, T2> *data, int size) {}
+  void savePrimitive(XMLElement *xml_element, std::unordered_multimap<T1, T2> *data_ptr, int size) {
+    saveMap(xml_element, data_ptr, size);
+  }
 
+  /*!
+   * \brief Stores the value of a member variable with std::pair type Container<T1, T2>.
+   * \tparam T Type of the to be stored variable
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data_ptr The Pointer to the Data  container to be stored
+   * \param int The size of the possible array (1 if no array)
+   */
   template <class T1, class T2>
-  void savePrimitive(XMLElement *xml_element, std::pair<T1, T2> *data, int size) {}
+  void savePrimitive(XMLElement *xml_element, std::pair<T1, T2> *data_ptr, int size) {
+    auto save1Container = [this](XMLElement *parent, std::pair<T1, T2> *data_ptr) {
+      parent->DeleteChildren();
+      int i = 0;
+      XMLElement *childFirst = parent->InsertNewChildElement(getChildName(0).c_str());
+      childFirst->SetText(data_ptr->first);
+      parent->InsertEndChild(childFirst);
+      XMLElement *childSecond = parent->InsertNewChildElement(getChildName(1).c_str());
+      childSecond->SetText(data_ptr->second);
+      parent->InsertEndChild(childSecond);
+    };
+
+    if (size > 1) {
+      xml_element->DeleteChildren();
+      for (int i = 0; i < size; i++) {
+        XMLElement *child = xml_element->InsertNewChildElement(getChildName(i).c_str());
+        save1Container(child, data_ptr++);
+        xml_element->InsertEndChild(child);
+      }
+
+    } else {
+      save1Container(xml_element, data_ptr);
+    }
+    settings->InsertEndChild(xml_element);
+  }
 
   /// </Saving methodes>
 

@@ -38,6 +38,11 @@ static std::string EXAMPLE_ARRAY_F = "test_array_f";
 constexpr std::array<double, NUM_VALS> TEST_ARRAY_D = {{10., 20., 30., 40., 50.}};
 static std::string EXAMPLE_ARRAY_D = "test_array_d";
 
+static std::string EXAMPLE_VECTOR_I = "test_vector_i";
+static std::string EXAMPLE_SET_D = "test_set_d";
+static std::string EXAMPLE_ARRAYED_MAP = "map_inside_array";
+static std::string EXAMPLE_ARRAYED_PAIR = "pair_inside_array";
+
 namespace utf = boost::unit_test;
 namespace tt = boost::test_tools;
 
@@ -618,6 +623,93 @@ BOOST_AUTO_TEST_CASE(settings_test_save_file_later) {
   BOOST_TEST(es.exampleDouble == es2.exampleDouble, tt::tolerance(TOLERANCE_D));
 
   BOOST_TEST(es2.deleteFile() == true);
+}
+
+namespace util {
+
+
+void saneVectorValues(std::vector<int> &var, int min, int max) {
+  for (auto &value : var) {
+    if (value > max) {
+      value = max;
+    } else if (value < min) {
+      value = min;
+    }
+  }
+}
+
+using StlSettings =
+    Settings<std::variant<std::vector<int> *, std::set<double> *, std::map<int, std::string> *, std::pair<int, std::string> *>>;
+class ExampleSettingsStlContainer : public StlSettings {
+ public:
+  static constexpr int MAX_I = 100;
+  static constexpr int MIN_I = -10;
+
+  ExampleSettingsStlContainer(const std::string &source_file_name)
+      : StlSettings(source_file_name) {
+    // introduce all membervariables which shall be saved.
+    const bool dont_throw_bad_parsing = true;
+    put<std::vector<int>>(
+        vector, EXAMPLE_VECTOR_I, dont_throw_bad_parsing, saneVectorValues, MIN_I, MAX_I);
+    put<std::set<double>>(set, EXAMPLE_SET_D, dont_throw_bad_parsing);
+    put<std::map<int, std::string>, 3>(
+        arraysed_map[0], EXAMPLE_ARRAYED_MAP, dont_throw_bad_parsing);
+    put<std::pair<int, std::string>, 3>(
+        arraysed_pairs[0], EXAMPLE_ARRAYED_PAIR, dont_throw_bad_parsing);
+  }
+
+  ~ExampleSettingsStlContainer() {}
+
+  std::vector<int> vector;
+  std::set<double> set;
+  std::array<std::map<int, std::string>, 3> arraysed_map;
+  std::array<std::pair<int, std::string>, 3> arraysed_pairs;
+};
+}  // namespace util
+
+BOOST_AUTO_TEST_CASE(settings_test_stl_support_save) {
+  // remove save file from previous test if exists.
+  std::remove(SAVE_FILE.c_str());
+
+  util::ExampleSettingsStlContainer es(SAVE_FILE);
+
+  es.vector.resize(4);
+  es.vector[0] = -20;
+  es.vector[1] = -10;
+  es.vector[2] = 0;
+  es.vector[3] = 10;
+
+  es.set.insert(0.1);
+  es.set.insert(0.2);
+  es.set.insert(0.3);
+  es.set.insert(0.4);
+
+  es.arraysed_map[0].insert({1, "one"});
+  es.arraysed_map[0].insert({2, "two"});
+  es.arraysed_map[0].insert({3, "three"});
+  es.arraysed_map[1].insert({1, "eins"});
+  es.arraysed_map[1].insert({2, "zwei"});
+  es.arraysed_map[1].insert({3, "drei"});
+  es.arraysed_map[2].insert({1, "uno"});
+  es.arraysed_map[2].insert({2, "dos"});
+  es.arraysed_map[2].insert({3, "tres"});
+
+  es.arraysed_pairs[0].first = 99;
+  es.arraysed_pairs[0].second = "neinUndNeunzig";
+  es.arraysed_pairs[1].first = 13;
+  es.arraysed_pairs[1].second = "drölf";
+  es.arraysed_pairs[2].first = 24;
+  es.arraysed_pairs[2].second = "halfTruth";
+
+  es.save();  // save overwrites the es.vector[0] = -20 to -10 due to sanity function
+
+  util::ExampleSettingsStlContainer es2(SAVE_FILE);
+
+
+  BOOST_TEST(es2.vector == es.vector);
+  BOOST_TEST(es2.set == es.set);
+  BOOST_TEST(es2.arraysed_map == es.arraysed_map);
+  BOOST_TEST(es2.arraysed_pairs == es.arraysed_pairs);
 }
 
 #pragma clang diagnostic pop
