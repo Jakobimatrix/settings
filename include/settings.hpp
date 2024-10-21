@@ -383,8 +383,7 @@ class Settings {
   /*!
    * \brief Loads stored bool value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data Void pointer to member variable or begin of array.
-   *        Assumes member variable type to be bool.
+   * \param data bool pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
@@ -396,8 +395,7 @@ class Settings {
   /*!
    * \brief Loads stored int value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data Void pointer to member variable or begin of array.
-   *        Assumes member variable type to be int.
+   * \param data int pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
@@ -409,8 +407,7 @@ class Settings {
   /*!
    * \brief Loads stored unsigned int value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data Void pointer to member variable or begin of array.
-   *        Assumes member variable type to be unsigned int.
+   * \param data unsigned int pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
@@ -422,8 +419,7 @@ class Settings {
   /*!
    * \brief Loads stored float value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data Void pointer to member variable or begin of array.
-   *        Assumes member variable type to be float.
+   * \param data float pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
@@ -435,8 +431,7 @@ class Settings {
   /*!
    * \brief Loads stored double value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data Void pointer to member variable or begin of array.
-   *        Assumes member variable type to be double.
+   * \param data double pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
@@ -448,8 +443,7 @@ class Settings {
   /*!
    * \brief Loads stored char value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data Void pointer to member variable or begin of array.
-   *        Assumes member variable type to be double.
+   * \param data string pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
@@ -458,6 +452,14 @@ class Settings {
     return xml_element->QueryStrText(data + increment);
   }
 
+  /*!
+   * \brief Loads stored vector data into member variable.
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data_ptr vector like pointer to member variable or begin of array.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
+   */
   template <class VectorContainer>
   [[nodiscard]] XMLError loadVectorData(const XMLElement *xml_element,
                                         VectorContainer *data_ptr,
@@ -499,6 +501,14 @@ class Settings {
     return loadVectorData(xml_element, data_ptr, increment);
   }
 
+  /*!
+   * \brief Loads stored set data into member variable.
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data_ptr set like pointer to member variable or begin of array.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
+   */
   template <template <typename> class SetContainer, typename T>
   [[nodiscard]] XMLError loadSetData(const XMLElement *xml_element,
                                      SetContainer<T> *data_ptr,
@@ -543,6 +553,14 @@ class Settings {
     return loadSetData(xml_element, data_ptr, increment);
   }
 
+  /*!
+   * \brief Loads stored map data into member variable.
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data_ptr map like pointer to member variable or begin of array.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
+   */
   template <template <typename, typename> class MapContainer, typename T1, typename T2>
   [[nodiscard]] XMLError loadMapData(const XMLElement *xml_element,
                                      MapContainer<T1, T2> *data_ptr,
@@ -607,6 +625,14 @@ class Settings {
     return loadMapData(xml_element, data_ptr, increment);
   }
 
+  /*!
+   * \brief Loads stored std::pair data into member variable.
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data_ptr std::pair pointer to member variable or begin of array.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
+   */
   template <class T1, class T2>
   [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
                                   std::pair<T1, T2> *data_ptr,
@@ -699,6 +725,7 @@ class Settings {
   }
 
   /// <Saving methodes>
+  /// <TYPE_SUPPORT> You need to define how your type should be stored
 
   /*!
    * \brief Stores the value of a member variable with basic type T.
