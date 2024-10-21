@@ -9,9 +9,12 @@ You can define a sanity check function for the variable.
 ## Supported Types:
  * bool
  * int
+ * int64_t
  * unsigned int
+ * uint64_t
  * float
  * double
+ * char
  * std::string // strings longer than 200 characters will be cropped!! see *src/tinyxml2/tinyxml2.h BUF_SIZE;
  * arrays and (const size) vectors of thouse types
  * most stl container

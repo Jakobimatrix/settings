@@ -405,6 +405,18 @@ class Settings {
   }
 
   /*!
+   * \brief Loads stored int64_t value into member variable.
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data int64_t pointer to member variable or begin of array.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
+   */
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, int64_t *data, int increment) {
+    return xml_element->QueryInt64Text(data + increment);
+  }
+
+  /*!
    * \brief Loads stored unsigned int value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
    * \param data unsigned int pointer to member variable or begin of array.
@@ -415,6 +427,19 @@ class Settings {
   [[nodiscard]] XMLError loadData(const XMLElement *xml_element, unsigned int *data, int increment) {
     return xml_element->QueryUnsignedText(data + increment);
   }
+
+  /*!
+   * \brief Loads stored uint64_t value into member variable.
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data uint64_t pointer to member variable or begin of array.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
+   */
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, uint64_t *data, int increment) {
+    return xml_element->QueryUnsigned64Text(data + increment);
+  }
+
 
   /*!
    * \brief Loads stored float value into member variable.
@@ -441,7 +466,7 @@ class Settings {
   }
 
   /*!
-   * \brief Loads stored char value into member variable.
+   * \brief Loads stored string value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
    * \param data string pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
@@ -451,6 +476,29 @@ class Settings {
   [[nodiscard]] XMLError loadData(const XMLElement *xml_element, std::string *data, int increment) {
     return xml_element->QueryStrText(data + increment);
   }
+
+  /*!
+   * \brief Loads stored char value into member variable.
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data char pointer to member variable or begin of array.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
+   */
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, char *data, int increment) {
+    std::string temp;
+    const XMLError error = xml_element->QueryStrText(&temp);
+    if (error != XMLError::XML_SUCCESS) {
+      return error;
+    }
+    assert(temp.size() == 1);
+    if (temp.size() != 1) {
+      return XML_CAN_NOT_CONVERT_TEXT;
+    }
+    *(data + increment) = temp[0];
+    return error;
+  }
+
 
   /*!
    * \brief Loads stored vector data into member variable.
@@ -736,16 +784,33 @@ class Settings {
    */
   template <class T>
   void savePrimitive(XMLElement *xml_element, T data_ptr, int size) {
-
-    if (size > 1) {
-      xml_element->DeleteChildren();
-      for (int i = 0; i < size; i++) {
-        XMLElement *child = xml_element->InsertNewChildElement(getChildName(i).c_str());
-        child->SetText(*data_ptr++);
-        xml_element->InsertEndChild(child);
+    if constexpr (std::is_same_v<char *, T>) {
+      // If we dont convert char to std::string, SetText will convert it to int...
+      if (size > 1) {
+        xml_element->DeleteChildren();
+        for (int i = 0; i < size; i++) {
+          XMLElement *child =
+              xml_element->InsertNewChildElement(getChildName(i).c_str());
+          std::string tmp(1, *data_ptr++);
+          child->SetText(tmp);
+          xml_element->InsertEndChild(child);
+        }
+      } else {
+        std::string tmp(1, *data_ptr);
+        xml_element->SetText(tmp);
       }
     } else {
-      xml_element->SetText(*data_ptr);
+      if (size > 1) {
+        xml_element->DeleteChildren();
+        for (int i = 0; i < size; i++) {
+          XMLElement *child =
+              xml_element->InsertNewChildElement(getChildName(i).c_str());
+          child->SetText(*data_ptr++);
+          xml_element->InsertEndChild(child);
+        }
+      } else {
+        xml_element->SetText(*data_ptr);
+      }
     }
     settings->InsertEndChild(xml_element);
   }
