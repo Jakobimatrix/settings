@@ -4,11 +4,13 @@
 #include <tinyxml2.h>
 
 #include <cassert>
+#include <codecvt>
 #include <deque>
 #include <filesystem>
 #include <functional>
 #include <iostream>
 #include <list>
+#include <locale>
 #include <map>
 #include <memory>
 #include <set>
@@ -28,11 +30,13 @@
 namespace util {
 
 // <TYPE_SUPPORT>
-// Base types: bool*, int*, unsigned int*, float*, double*, std::string*
-// (At the moment strings longer than 200 char will get croped!!)
+// Base types: bool*, int*, unsigned int*, float*, double*, std::string*,
+// std::wstring (At the moment strings longer than 200 char will get croped!!)
+// (At the moment wstrings longer than 100 char will get croped!!)
 // StlContainer: All
 using namespace tinyxml2;
-template <typename VariantData = std::variant<bool *, int *, unsigned int *, float *, double *, std::string *>>
+template <typename VariantData =
+              std::variant<bool *, char *, wchar_t *, int *, unsigned int *, float *, double *, std::string *, std::wstring>>
 class Settings {
 
   struct Data {
@@ -478,6 +482,23 @@ class Settings {
   }
 
   /*!
+   * \brief Loads stored wstring value into member variable.
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data wstring pointer to member variable or begin of array.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
+   */
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, std::wstring *data, int increment) {
+    std::string s;
+    const XMLError retVal = xml_element->QueryStrText(&s);
+    if (retVal == XMLError::XML_SUCCESS) {
+      *(data + increment) = castToWstring(s);
+    }
+    return retVal;
+  }
+
+  /*!
    * \brief Loads stored char value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
    * \param data char pointer to member variable or begin of array.
@@ -496,6 +517,33 @@ class Settings {
       return XML_CAN_NOT_CONVERT_TEXT;
     }
     *(data + increment) = temp[0];
+    return error;
+  }
+
+  /*!
+   * \brief Loads stored char value into member variable.
+   * \param xml_element Valid pointer to the element which stores the variable.
+   * \param data char pointer to member variable or begin of array.
+   * \param increment Position in member variable array, or 0 if not array but
+   * simple member variable. return XMLError errorflag showing if parsing was
+   * successfull.
+   */
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, wchar_t *data, int increment) {
+    std::string temp;
+    const XMLError error = xml_element->QueryStrText(&temp);
+    if (error != XMLError::XML_SUCCESS) {
+      return error;
+    }
+    assert(temp.size() == 2);
+    if (temp.size() != 1) {
+      return XML_CAN_NOT_CONVERT_TEXT;
+    }
+    const std::wstring wtemp = castToWstring(temp);
+    assert(wtemp.size() == 1);
+    if (wtemp.size() != 1) {
+      return XML_CAN_NOT_CONVERT_TEXT;
+    }
+    *(data + increment) = wtemp[0];
     return error;
   }
 
@@ -799,7 +847,38 @@ class Settings {
         std::string tmp(1, *data_ptr);
         xml_element->SetText(tmp);
       }
-    } else {
+    } else if constexpr (std::is_same_v<wchar_t *, T>) {
+      // If we dont convert wchar_t to std::wstring, SetText will convert it to int...
+      if (size > 1) {
+        xml_element->DeleteChildren();
+        for (int i = 0; i < size; i++) {
+          XMLElement *child =
+              xml_element->InsertNewChildElement(getChildName(i).c_str());
+          std::wstring tmp(1, *data_ptr++);
+          std::string tmps = castFromWstring(tmp);
+          child->SetText(tmps);
+          xml_element->InsertEndChild(child);
+        }
+      } else {
+        std::wstring tmp(1, *data_ptr);
+        std::string tmps = castFromWstring(tmp);
+        xml_element->SetText(tmps);
+      }
+    } else if constexpr (std::is_same_v<std::wstring *, T>) {
+      if (size > 1) {
+        xml_element->DeleteChildren();
+        for (int i = 0; i < size; i++) {
+          XMLElement *child =
+              xml_element->InsertNewChildElement(getChildName(i).c_str());
+          std::string tmp = castFromWstring(*data_ptr++) child->SetText(tmp);
+          xml_element->InsertEndChild(child);
+        }
+      } else {
+        std::string tmp = castFromWstring(*data_ptr) xml_element->SetText(tmp);
+      }
+    }
+    settings->InsertEndChild(xml_element);
+    else {
       if (size > 1) {
         xml_element->DeleteChildren();
         for (int i = 0; i < size; i++) {
@@ -966,6 +1045,18 @@ class Settings {
   }
 
   /// </Saving methodes>
+
+  std::string castFromWstring(const std::wstring &input) {
+    // Convert wstring to string using a wide-to-UTF-8 conversion
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    return converter.to_bytes(input);
+  }
+
+  std::wstring castToWstring(const std::string &input) {
+    // Convert string to wstring using a UTF-8-to-wide conversion
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    return converter.from_bytes(input);
+  }
 
   std::string class_name = "Settings";
   std::filesystem::path source;

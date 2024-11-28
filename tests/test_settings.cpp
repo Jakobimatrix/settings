@@ -24,6 +24,8 @@ constexpr double DEF_DOUBLE[3] = {2. / 5., 3. / 5., 3.141592653589793};
 static std::string EXAMPLE_DOUBLE = "ExampleDouble";
 std::string DEF_STR[3] = {"abc", "de", "fghi"};
 static std::string EXAMPLE_STRING = "ExampleStr";
+std::wstring DEF_WSTR[3] = {L"Hello, 世界!", L"öüäß", L"êéè"};
+static std::string EXAMPLE_WSTRING = "ExampleWStr";
 
 static constexpr int NUM_VALS = 5;
 constexpr std::array<bool, NUM_VALS> TEST_ARRAY_B = {{true, true, true, true, true}};
@@ -63,6 +65,7 @@ class ExampleSettings : public Settings<> {
     put<float>(exampleFloat, EXAMPLE_FLOAT, dont_throw_bad_parsing);
     put<double>(exampleDouble, EXAMPLE_DOUBLE, dont_throw_bad_parsing);
     put<std::string>(exampleStr, EXAMPLE_STRING, dont_throw_bad_parsing);
+    put<std::wstring>(exampleWStr, EXAMPLE_WSTRING, dont_throw_bad_parsing);
   }
 
   ~ExampleSettings() {}
@@ -73,6 +76,7 @@ class ExampleSettings : public Settings<> {
   float exampleFloat = DEF_FLOAT[0];
   double exampleDouble = DEF_DOUBLE[0];
   std::string exampleStr = DEF_STR[0];
+  std::wstring exampleWStr = DEF_WSTR[0];
 };
 
 class ExampleSettingsArray : public Settings<> {
@@ -118,6 +122,7 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
       es.exampleFloat = DEF_FLOAT[1];
       es.exampleDouble = DEF_DOUBLE[1];
       es.exampleStr = DEF_STR[1];
+      es.exampleWStr = DEF_WSTR[1];
       es.save();
     }
 
@@ -180,6 +185,7 @@ BOOST_AUTO_TEST_CASE(settings_test_types_load_and_save) {
     BOOST_TEST(error == tinyxml2::XMLError::XML_SUCCESS);
     BOOST_TEST(test_c.compare(DEF_STR[i]) == 0);
     BOOST_TEST(es.exampleStr.compare(DEF_STR[i]) == 0);
+    BOOST_TEST(es.exampleWStr.compare(DEF_WSTR[i]) == 0);
   }
 
   // 3. new class with same save file:
