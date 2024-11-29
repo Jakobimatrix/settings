@@ -7,6 +7,7 @@
 #include <boost/test/unit_test.hpp>
 #include <cmath>
 #include <limits>
+#include <sanitizers.hpp>
 #include <settings.hpp>
 
 static std::string SAVE_FILE = "ExampleSettingsMemberVariables.xml";
@@ -376,15 +377,6 @@ BOOST_AUTO_TEST_CASE(settings_test_array) {
   }
 }
 
-template <class T>
-void saneMinMax(T &var, T min, T max) {
-  if (var > max) {
-    var = max;
-  } else if (var < min) {
-    var = min;
-  }
-}
-
 class ExampleSaneSettings : public util::Settings<> {
  public:
   ExampleSaneSettings(const std::string &source_file_name)
@@ -397,9 +389,9 @@ class ExampleSaneSettings : public util::Settings<> {
   void initSettinngs() {
     // introduce all membervariables which shall be saved.
     const bool dont_throw_bad_parsing = true;
-    put<int>(exampleInt, EXAMPLE_INT, dont_throw_bad_parsing, saneMinMax, MIN_I, MAX_I);
-    put<float>(exampleFloat, EXAMPLE_FLOAT, dont_throw_bad_parsing, saneMinMax, MIN_F, MAX_F);
-    put<double>(exampleDouble, EXAMPLE_DOUBLE, dont_throw_bad_parsing, saneMinMax, MIN_D, MAX_D);
+    put<int>(exampleInt, EXAMPLE_INT, dont_throw_bad_parsing, util::saneMinMax, MIN_I, MAX_I);
+    put<float>(exampleFloat, EXAMPLE_FLOAT, dont_throw_bad_parsing, util::saneMinMax, MIN_F, MAX_F);
+    put<double>(exampleDouble, EXAMPLE_DOUBLE, dont_throw_bad_parsing, util::saneMinMax, MIN_D, MAX_D);
   }
 
   ~ExampleSaneSettings() {}

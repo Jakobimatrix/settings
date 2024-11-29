@@ -15,7 +15,9 @@ You can define a sanity check function for the variable.
  * float
  * double
  * char
+ * wchar_t
  * std::string // strings longer than 200 characters will be cropped!! see *src/tinyxml2/tinyxml2.h BUF_SIZE;
+ * std::wstring // strings longer than 100 characters will be cropped!! see *src/tinyxml2/tinyxml2.h BUF_SIZE;
  * arrays and (const size) vectors of thouse types
  * most stl container
  * In generel every class/structure where the members are stored tightly packed in an array like:

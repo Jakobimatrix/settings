@@ -36,7 +36,7 @@ namespace util {
 // StlContainer: All
 using namespace tinyxml2;
 template <typename VariantData =
-              std::variant<bool *, char *, wchar_t *, int *, unsigned int *, float *, double *, std::string *, std::wstring>>
+              std::variant<bool *, char *, wchar_t *, int *, unsigned int *, float *, double *, std::string *, std::wstring *>>
 class Settings {
 
   struct Data {
@@ -77,7 +77,7 @@ class Settings {
    * This method can throw an exception.
    * T The type of the membervariable.
    * N (default = 1) size of array.
-   * \param value The pointer to the membervariable, or first element if array.
+   * \param value The pointer to the member variable, or first element if array.
    * \param name A unique identifier for that variable (used in xml file)
    * \param ignore_read_error If true this methode will not throw when parsing
    * goes wrong.
@@ -521,9 +521,9 @@ class Settings {
   }
 
   /*!
-   * \brief Loads stored char value into member variable.
+   * \brief Loads stored wchar_t value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data char pointer to member variable or begin of array.
+   * \param data wchar_t pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
@@ -534,8 +534,8 @@ class Settings {
     if (error != XMLError::XML_SUCCESS) {
       return error;
     }
-    assert(temp.size() == 2);
-    if (temp.size() != 1) {
+    assert(temp.size() <= 2);
+    if (temp.size() > 2) {
       return XML_CAN_NOT_CONVERT_TEXT;
     }
     const std::wstring wtemp = castToWstring(temp);
@@ -823,6 +823,32 @@ class Settings {
   /// <Saving methodes>
   /// <TYPE_SUPPORT> You need to define how your type should be stored
 
+  void setText(XMLElement *xml_element, const char data) {
+    // tinyXml does not support char, cast to std::string
+    std::string tmp(1, data);
+    xml_element->SetText(tmp);
+  }
+
+  void setText(XMLElement *xml_element, const wchar_t data) {
+    std::wstring tmp(1, data);
+    std::string stmp = castFromWstring(tmp);
+    xml_element->SetText(stmp);
+  }
+
+  void setText(XMLElement *xml_element, const std::wstring &data) {
+    std::string stmp = castFromWstring(data);
+    xml_element->SetText(stmp);
+  }
+
+  void setText(XMLElement *xml_element, const std::string &data) {
+    // this is just so that we dont copy the string twice (SetText takes a copy) the templated version does too since the basic types are smaller than a reference pointer.
+    xml_element->SetText(data);
+  }
+
+  template <class T>
+  void setText(XMLElement *xml_element, const T data) {
+    xml_element->SetText(data);
+  }
   /*!
    * \brief Stores the value of a member variable with basic type T.
    * \tparam T Type of the to be stored variable
@@ -832,64 +858,15 @@ class Settings {
    */
   template <class T>
   void savePrimitive(XMLElement *xml_element, T data_ptr, int size) {
-    if constexpr (std::is_same_v<char *, T>) {
-      // If we dont convert char to std::string, SetText will convert it to int...
-      if (size > 1) {
-        xml_element->DeleteChildren();
-        for (int i = 0; i < size; i++) {
-          XMLElement *child =
-              xml_element->InsertNewChildElement(getChildName(i).c_str());
-          std::string tmp(1, *data_ptr++);
-          child->SetText(tmp);
-          xml_element->InsertEndChild(child);
-        }
-      } else {
-        std::string tmp(1, *data_ptr);
-        xml_element->SetText(tmp);
+    if (size > 1) {
+      xml_element->DeleteChildren();
+      for (int i = 0; i < size; i++) {
+        XMLElement *child = xml_element->InsertNewChildElement(getChildName(i).c_str());
+        setText(child, *data_ptr++);
+        xml_element->InsertEndChild(child);
       }
-    } else if constexpr (std::is_same_v<wchar_t *, T>) {
-      // If we dont convert wchar_t to std::wstring, SetText will convert it to int...
-      if (size > 1) {
-        xml_element->DeleteChildren();
-        for (int i = 0; i < size; i++) {
-          XMLElement *child =
-              xml_element->InsertNewChildElement(getChildName(i).c_str());
-          std::wstring tmp(1, *data_ptr++);
-          std::string tmps = castFromWstring(tmp);
-          child->SetText(tmps);
-          xml_element->InsertEndChild(child);
-        }
-      } else {
-        std::wstring tmp(1, *data_ptr);
-        std::string tmps = castFromWstring(tmp);
-        xml_element->SetText(tmps);
-      }
-    } else if constexpr (std::is_same_v<std::wstring *, T>) {
-      if (size > 1) {
-        xml_element->DeleteChildren();
-        for (int i = 0; i < size; i++) {
-          XMLElement *child =
-              xml_element->InsertNewChildElement(getChildName(i).c_str());
-          std::string tmp = castFromWstring(*data_ptr++) child->SetText(tmp);
-          xml_element->InsertEndChild(child);
-        }
-      } else {
-        std::string tmp = castFromWstring(*data_ptr) xml_element->SetText(tmp);
-      }
-    }
-    settings->InsertEndChild(xml_element);
-    else {
-      if (size > 1) {
-        xml_element->DeleteChildren();
-        for (int i = 0; i < size; i++) {
-          XMLElement *child =
-              xml_element->InsertNewChildElement(getChildName(i).c_str());
-          child->SetText(*data_ptr++);
-          xml_element->InsertEndChild(child);
-        }
-      } else {
-        xml_element->SetText(*data_ptr);
-      }
+    } else {
+      setText(xml_element, *data_ptr);
     }
     settings->InsertEndChild(xml_element);
   }
@@ -909,7 +886,7 @@ class Settings {
       int i = 0;
       for (const auto &d : *data_ptr) {
         XMLElement *child = parent->InsertNewChildElement(getChildName(i++).c_str());
-        child->SetText(d);
+        setText(child, d);
         parent->InsertEndChild(child);
       }
     };
