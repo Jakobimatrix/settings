@@ -62,14 +62,17 @@ class Settings {
   using DatamapIt = typename std::map<std::string, Data>::iterator;
 
  public:
-  Settings() { loadFile(); }
+  Settings() { [[maybe_unused]] XMLError error = loadFile(); }
 
  protected:
   /*!
    * \brief Constructor needs the path to the source file.
    * The file does not need to exist.
+   * \param source_file The file and path from where to load the data.
    */
-  Settings(const std::filesystem::path &source) : source(source) { loadFile(); }
+  Settings(const std::filesystem::path &source_file) : source(source_file) {
+    [[maybe_unused]] XMLError error = loadFile();
+  }
 
   /*!
    * \brief Registers a membervariable to be saved in to xml format.
@@ -83,10 +86,10 @@ class Settings {
    * goes wrong.
    */
   template <class T, size_t N = 1>
-  void put(T &value, const std::string &name, bool ignore_read_error) {
+  void put(T *value, const std::string &name, bool ignore_read_error) {
     putAssert(name);
 
-    const auto res = data.emplace(name, Data(&value, N));
+    const auto res = data.emplace(name, Data(value, N));
 
     if (!loadIf(name, ignore_read_error)) {
       save(nullptr, res.first);
@@ -108,20 +111,18 @@ class Settings {
    * this methode will not throw when parsing goes wrong.
    */
   template <class T, size_t N = 1, typename... ARGS>
-  void put(T &value,
+  void put(T *value,
            const std::string &name,
            bool ignore_read_error,
            void (*sanitizeVariableFunction)(T &, ARGS...),
            const ARGS... args) {
     putAssert(name);
 
-    const std::pair<DatamapIt, bool> res = data.emplace(name, Data(&value, N));
+    const std::pair<DatamapIt, bool> res = data.emplace(name, Data(value, N));
 
     const std::tuple<T &, ARGS...> all_args =
-        std::tuple_cat(std::tie(value), std::make_tuple(args...));
+        std::tuple_cat(std::tie(*value), std::make_tuple(args...));
 
-    // VariadicFunction<T&, ARGS...> sanitizFunction(all_args,
-    // sanitizeVariableFunction);
     res.first->second.sanitizeFunction_ =
         std::make_unique<VariadicFunction<T &, ARGS...>>(all_args, sanitizeVariableFunction);
 
@@ -149,9 +150,19 @@ class Settings {
   /*!
    * \brief Writes the values into all member variables found in the provided
    * file. Throws if parsing error occured.
+   * \return a vector of all variables, which could not be read. Possible reasons: File does not exist, File did not contain the variable. File did contain the variable, but the variable could not be parsed.
    */
-  void reloadAllFromFile() {
-    loadFile();
+  std::vector<std::string> reloadAllFromFile() {
+    XMLError error = loadFile();
+    std::vector<std::string> bad_variables{};
+
+    if (error != XMLError::XML_SUCCESS) {
+      bad_variables.reserve(data.size());
+      for (DatamapIt it = data.begin(); it != data.end(); ++it) {
+        bad_variables.push_back(it->first);
+      }
+      return bad_variables;
+    }
     // Iterate through xml and find in map (is faster than other way round).
     // same as in save() ->  FirstChildElement() does not return first element
     /*
@@ -166,27 +177,19 @@ class Settings {
     }
     */
 
-    std::vector<std::string> bad_variables;
     for (DatamapIt it = data.begin(); it != data.end(); ++it) {
       XMLElement *element = settings->FirstChildElement(it->first.c_str());
+      if (element == nullptr) {
+        bad_variables.push_back(it->first);
+        continue;
+      }
 
-      assert(("Settings::loadAll: Did not found requested " + it->first).c_str() &&
-             element != nullptr);
-
-      const XMLError error = load(element, it);
-      if (error != XMLError::XML_SUCCESS) {
+      const XMLError errorLoad = load(element, it);
+      if (errorLoad != XMLError::XML_SUCCESS) {
         bad_variables.push_back(it->first);
       }
     }
-    if (bad_variables.size() > 0) {
-      std::string bad = "";
-      for (const auto &str : bad_variables) {
-        bad += (bad.length() > 0 ? ", " : "") + str;
-      }
-      throw std::runtime_error(
-          class_name +
-          "::reloadAllFromFile: Failed to read the following variables: " + bad);
-    }
+    return bad_variables;
   }
 
   /*!
@@ -223,10 +226,7 @@ class Settings {
     // slower.
     for (DatamapIt it = data.begin(); it != data.end(); ++it) {
       XMLElement *element = settings->FirstChildElement(it->first.c_str());
-
-      assert(("Settings::save: Did not found requested " + it->first).c_str() &&
-             element != nullptr);
-
+      // its of if element is a nullptr, in that case save(element, it) will create the element.
       save(element, it);
     }
 
@@ -331,7 +331,7 @@ class Settings {
    * \param i position in array.
    * return name of child node
    */
-  std::string getChildName(int i) const {
+  std::string static getChildName(int i) {
     return std::string("_" + std::to_string(i));
   }
 
@@ -347,15 +347,15 @@ class Settings {
     auto load_ = [this](VariantData &variant_data, const XMLElement *child, int increment) -> XMLError {
       XMLError error;
       std::visit(
-          [this, &child, &increment, &error](auto &&variant_data) -> void {
-            error = loadData(child, variant_data, increment);
+          [this, &child, &increment, &error](auto &&visited_data) -> void {
+            error = this->loadData(child, visited_data, increment);
           },
           variant_data);
       return error;
     };
 
     if (settings_data_it->second.size > 1) {
-      for (int i = 0; i < settings_data_it->second.size; i++) {
+      for (int i = 0; i < settings_data_it->second.size; ++i) {
         const std::string child_name = getChildName(i);
         const XMLElement *child = xml_element->FirstChildElement(child_name.c_str());
         assert("Settings::load: Child element (Array element) is missing." && child != nullptr);
@@ -387,113 +387,119 @@ class Settings {
   /*!
    * \brief Loads stored bool value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data bool pointer to member variable or begin of array.
+   * \param bool_data bool pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, bool *data, int increment) {
-    return xml_element->QueryBoolText(data + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, bool *bool_data, int increment) {
+    return xml_element->QueryBoolText(bool_data + increment);
   }
 
   /*!
    * \brief Loads stored int value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data int pointer to member variable or begin of array.
+   * \param int_data int pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, int *data, int increment) {
-    return xml_element->QueryIntText(data + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, int *int_data, int increment) {
+    return xml_element->QueryIntText(int_data + increment);
   }
 
   /*!
    * \brief Loads stored int64_t value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data int64_t pointer to member variable or begin of array.
+   * \param int64_data int64_t pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, int64_t *data, int increment) {
-    return xml_element->QueryInt64Text(data + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, int64_t *int64_data, int increment) {
+    return xml_element->QueryInt64Text(int64_data + increment);
   }
 
   /*!
    * \brief Loads stored unsigned int value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data unsigned int pointer to member variable or begin of array.
-   * \param increment Position in member variable array, or 0 if not array but
-   * simple member variable. return XMLError errorflag showing if parsing was
-   * successfull.
+   * \param unsigned_data unsigned int pointer to member variable or begin of
+   * array. \param increment Position in member variable array, or 0 if not
+   * array but simple member variable. return XMLError errorflag showing if
+   * parsing was successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, unsigned int *data, int increment) {
-    return xml_element->QueryUnsignedText(data + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  unsigned int *unsigned_data,
+                                  int increment) {
+    return xml_element->QueryUnsignedText(unsigned_data + increment);
   }
 
   /*!
    * \brief Loads stored uint64_t value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data uint64_t pointer to member variable or begin of array.
+   * \param uint64_data uint64_t pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, uint64_t *data, int increment) {
-    return xml_element->QueryUnsigned64Text(data + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, uint64_t *uint64_data, int increment) {
+    return xml_element->QueryUnsigned64Text(uint64_data + increment);
   }
 
 
   /*!
    * \brief Loads stored float value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data float pointer to member variable or begin of array.
+   * \param float_data float pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, float *data, int increment) {
-    return xml_element->QueryFloatText(data + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, float *float_data, int increment) {
+    return xml_element->QueryFloatText(float_data + increment);
   }
 
   /*!
    * \brief Loads stored double value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data double pointer to member variable or begin of array.
+   * \param double_data double pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, double *data, int increment) {
-    return xml_element->QueryDoubleText(data + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, double *double_data, int increment) {
+    return xml_element->QueryDoubleText(double_data + increment);
   }
 
   /*!
    * \brief Loads stored string value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data string pointer to member variable or begin of array.
+   * \param string_data string pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, std::string *data, int increment) {
-    return xml_element->QueryStrText(data + increment);
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::string *string_data,
+                                  int increment) {
+    return xml_element->QueryStrText(string_data + increment);
   }
 
   /*!
    * \brief Loads stored wstring value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data wstring pointer to member variable or begin of array.
+   * \param wstring_data wstring pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, std::wstring *data, int increment) {
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element,
+                                  std::wstring *wstring_data,
+                                  int increment) {
     std::string s;
     const XMLError retVal = xml_element->QueryStrText(&s);
     if (retVal == XMLError::XML_SUCCESS) {
-      *(data + increment) = castToWstring(s);
+      *(wstring_data + increment) = castToWstring(s);
     }
     return retVal;
   }
@@ -501,12 +507,12 @@ class Settings {
   /*!
    * \brief Loads stored char value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data char pointer to member variable or begin of array.
+   * \param char_data char pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, char *data, int increment) {
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, char *char_data, int increment) {
     std::string temp;
     const XMLError error = xml_element->QueryStrText(&temp);
     if (error != XMLError::XML_SUCCESS) {
@@ -516,19 +522,19 @@ class Settings {
     if (temp.size() != 1) {
       return XML_CAN_NOT_CONVERT_TEXT;
     }
-    *(data + increment) = temp[0];
+    *(char_data + increment) = temp[0];
     return error;
   }
 
   /*!
    * \brief Loads stored wchar_t value into member variable.
    * \param xml_element Valid pointer to the element which stores the variable.
-   * \param data wchar_t pointer to member variable or begin of array.
+   * \param wchar_data wchar_t pointer to member variable or begin of array.
    * \param increment Position in member variable array, or 0 if not array but
    * simple member variable. return XMLError errorflag showing if parsing was
    * successfull.
    */
-  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, wchar_t *data, int increment) {
+  [[nodiscard]] XMLError loadData(const XMLElement *xml_element, wchar_t *wchar_data, int increment) {
     std::string temp;
     const XMLError error = xml_element->QueryStrText(&temp);
     if (error != XMLError::XML_SUCCESS) {
@@ -543,7 +549,7 @@ class Settings {
     if (wtemp.size() != 1) {
       return XML_CAN_NOT_CONVERT_TEXT;
     }
-    *(data + increment) = wtemp[0];
+    *(wchar_data + increment) = wtemp[0];
     return error;
   }
 
@@ -735,8 +741,6 @@ class Settings {
                                   int increment) {
     std::advance(data_ptr, increment);
 
-    int i = 0;
-
     const XMLElement *childFirst =
         xml_element->FirstChildElement(getChildName(0).c_str());
     const XMLElement *childSecond =
@@ -762,13 +766,15 @@ class Settings {
 
   /*!
    * \brief Read the xml file if it exists.
+   * \return XMLError. Could be XMLError::XML_SUCCESS or XMLError::XML_ERROR_FILE_NOT_FOUND or XMLError::XML_ERROR_EMPTY_DOCUMENT or XMLError::XML_ERROR_FILE_READ_ERROR
    */
-  void loadFile() {
+  [[nodiscard]] XMLError loadFile() {
     XMLError error = source.empty()
                          ? XMLError::XML_ERROR_FILE_NOT_FOUND
                          : settingsDocument.LoadFile(source.string().c_str());
     if (error != XMLError::XML_SUCCESS) {
-      if (error == XMLError::XML_ERROR_FILE_NOT_FOUND || XMLError::XML_ERROR_EMPTY_DOCUMENT) {
+      if (error == XMLError::XML_ERROR_FILE_NOT_FOUND ||
+          error == XMLError::XML_ERROR_EMPTY_DOCUMENT) {
         settingsDocument.ClearError();
         settingsDocument.Clear();
         // define root element
@@ -798,6 +804,7 @@ class Settings {
       throw std::runtime_error(
           class_name + "::constructor: An unhandled Error occured: " + std::to_string(error));
     }
+    return error;
   }
 
   /*!
@@ -814,8 +821,8 @@ class Settings {
     settings_data_it->second.sanitize();
 
     std::visit(
-        [this, &xml_element, &settings_data_it](auto &&variant_data) -> void {
-          savePrimitive(xml_element, variant_data, settings_data_it->second.size);
+        [this, &xml_element, &settings_data_it](auto &&visited_data) -> void {
+          this->savePrimitive(xml_element, visited_data, settings_data_it->second.size);
         },
         settings_data_it->second.data);
   }
@@ -823,31 +830,31 @@ class Settings {
   /// <Saving methodes>
   /// <TYPE_SUPPORT> You need to define how your type should be stored
 
-  void setText(XMLElement *xml_element, const char data) {
+  void setText(XMLElement *xml_element, const char char_data) {
     // tinyXml does not support char, cast to std::string
-    std::string tmp(1, data);
+    std::string tmp(1, char_data);
     xml_element->SetText(tmp);
   }
 
-  void setText(XMLElement *xml_element, const wchar_t data) {
-    std::wstring tmp(1, data);
+  void setText(XMLElement *xml_element, const wchar_t wchar_data) {
+    std::wstring tmp(1, wchar_data);
     std::string stmp = castFromWstring(tmp);
     xml_element->SetText(stmp);
   }
 
-  void setText(XMLElement *xml_element, const std::wstring &data) {
-    std::string stmp = castFromWstring(data);
+  void setText(XMLElement *xml_element, const std::wstring &wchar_data) {
+    std::string stmp = castFromWstring(wchar_data);
     xml_element->SetText(stmp);
   }
 
-  void setText(XMLElement *xml_element, const std::string &data) {
+  void setText(XMLElement *xml_element, const std::string &string_data) {
     // this is just so that we dont copy the string twice (SetText takes a copy) the templated version does too since the basic types are smaller than a reference pointer.
-    xml_element->SetText(data);
+    xml_element->SetText(string_data);
   }
 
   template <class T>
-  void setText(XMLElement *xml_element, const T data) {
-    xml_element->SetText(data);
+  void setText(XMLElement *xml_element, const T t_data) {
+    xml_element->SetText(t_data);
   }
   /*!
    * \brief Stores the value of a member variable with basic type T.
@@ -860,7 +867,7 @@ class Settings {
   void savePrimitive(XMLElement *xml_element, T data_ptr, int size) {
     if (size > 1) {
       xml_element->DeleteChildren();
-      for (int i = 0; i < size; i++) {
+      for (int i = 0; i < size; ++i) {
         XMLElement *child = xml_element->InsertNewChildElement(getChildName(i).c_str());
         setText(child, *data_ptr++);
         xml_element->InsertEndChild(child);
@@ -881,19 +888,19 @@ class Settings {
   template <typename Container>
   void saveContainer(XMLElement *xml_element, Container *data_ptr, int size) {
 
-    auto save1Container = [this](XMLElement *parent, Container *data_ptr) {
+    auto save1Container = [this](XMLElement *parent, Container *data_ptr_lambda) {
       parent->DeleteChildren();
       int i = 0;
-      for (const auto &d : *data_ptr) {
+      for (const auto &d : *data_ptr_lambda) {
         XMLElement *child = parent->InsertNewChildElement(getChildName(i++).c_str());
-        setText(child, d);
+        this->setText(child, d);
         parent->InsertEndChild(child);
       }
     };
 
     if (size > 1) {
       xml_element->DeleteChildren();
-      for (int i = 0; i < size; i++) {
+      for (int i = 0; i < size; ++i) {
         XMLElement *child = xml_element->InsertNewChildElement(getChildName(i).c_str());
         save1Container(child, data_ptr++);
         xml_element->InsertEndChild(child);
@@ -916,10 +923,10 @@ class Settings {
   template <typename Container>
   void saveMap(XMLElement *xml_element, Container *data_ptr, int size) {
 
-    auto save1Container = [this](XMLElement *parent, Container *data_ptr) {
+    auto save1Container = [](XMLElement *parent, Container *data_ptr_lambda) {
       parent->DeleteChildren();
       int i = 0;
-      for (const auto &[key, value] : *data_ptr) {
+      for (const auto &[key, value] : *data_ptr_lambda) {
         XMLElement *child = parent->InsertNewChildElement(getChildName(i++).c_str());
         child->SetText(key);
         XMLElement *childValue = child->InsertNewChildElement(getChildName(0).c_str());
@@ -931,7 +938,7 @@ class Settings {
 
     if (size > 1) {
       xml_element->DeleteChildren();
-      for (int i = 0; i < size; i++) {
+      for (int i = 0; i < size; ++i) {
         XMLElement *child = xml_element->InsertNewChildElement(getChildName(i).c_str());
         save1Container(child, data_ptr++);
         xml_element->InsertEndChild(child);
@@ -996,20 +1003,20 @@ class Settings {
    */
   template <class T1, class T2>
   void savePrimitive(XMLElement *xml_element, std::pair<T1, T2> *data_ptr, int size) {
-    auto save1Container = [this](XMLElement *parent, std::pair<T1, T2> *data_ptr) {
+    auto save1Container = [](XMLElement *parent, std::pair<T1, T2> *data_ptr_lambda) {
       parent->DeleteChildren();
-      int i = 0;
+
       XMLElement *childFirst = parent->InsertNewChildElement(getChildName(0).c_str());
-      childFirst->SetText(data_ptr->first);
+      childFirst->SetText(data_ptr_lambda->first);
       parent->InsertEndChild(childFirst);
       XMLElement *childSecond = parent->InsertNewChildElement(getChildName(1).c_str());
-      childSecond->SetText(data_ptr->second);
+      childSecond->SetText(data_ptr_lambda->second);
       parent->InsertEndChild(childSecond);
     };
 
     if (size > 1) {
       xml_element->DeleteChildren();
-      for (int i = 0; i < size; i++) {
+      for (int i = 0; i < size; ++i) {
         XMLElement *child = xml_element->InsertNewChildElement(getChildName(i).c_str());
         save1Container(child, data_ptr++);
         xml_element->InsertEndChild(child);

@@ -1,40 +1,43 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.16)
 
-set(SETTINGS_LIB_VERSION "1.0.0")
+# Define project if not already defined (useful for subproject inclusion)
+if (NOT DEFINED PROJECT_NAME)
+    project(<MY_PROJECT> LANGUAGES CXX)
 
+    # This variable must exist!
+    set(ENVIRONMENT_SETTINGS "ProjectSettings")
 
-if(NOT "${CMAKE_CXX_STANDARD}")
-  set(CMAKE_CXX_STANDARD 17)
+    add_library("${ENVIRONMENT_SETTINGS}" INTERFACE)
+
+    # ===== Compiler Settings =====
+    include(initRepo/cmake/CompilerSetup.cmake)
+
+    # ===== Warnings and Tools =====
+    include(initRepo/cmake/CompilerWarnings.cmake)
+    set_project_warnings(${ENVIRONMENT_SETTINGS})
+
+    # ===== External Dependencies =====
+    include(initRepo/cmake/Includes.cmake)
+
+    # ===== Options =====
+    include(initRepo/cmake/Options.cmake)
+    enable_multithreading(${ENVIRONMENT_SETTINGS})
+    enable_shared_libraries(${ENVIRONMENT_SETTINGS})
+
+    # ===== Fuzzing =====
+    include(initRepo/cmake/ClangFuzzyTests.cmake)
 endif()
 
-find_package(tinyxml2 QUIET)
+enable_testing()
 
-if(NOT tinyxml2_FOUND)
-  add_subdirectory(src/tinyxml2)
-  target_compile_options(tinyxml2 PRIVATE
-      -w  # Suppress all warnings
-      -Wno-error # dont treat warnings as errors
-  )
+if (BUILD_TESTING)
+    set(tinyxml2_BUILD_TESTING TRUE)
 endif()
+
+add_subdirectory(src/tinyxml2)
+target_compile_options(tinyxml2 INTERFACE -w -Wno-error)
 
 add_subdirectory(src/utils)
-add_library(settings_lib_${SETTINGS_LIB_VERSION} INTERFACE)
-
-# Create an alias with the version in its name
-add_library(settings_lib ALIAS settings_lib_${SETTINGS_LIB_VERSION})
-
-target_link_libraries(settings_lib_${SETTINGS_LIB_VERSION} INTERFACE
-    tinyxml2
-    utils_lib_0.0.1)
-
-target_include_directories(settings_lib_${SETTINGS_LIB_VERSION}
-      INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-
-option(TEST_SETTINGS "Build Boost Tests for settings_lib and tinyxml2" FALSE)
-
-if(TEST_SETTINGS)
-  enable_testing()
-  add_subdirectory(tests)
-  set(tinyxml2_BUILD_TESTING TRUE)
-  add_subdirectory(src/tinyxml2)
-endif()
+add_subdirectory(src/settings)
+add_subdirectory(src/tests)
+add_subdirectory(src/executables)

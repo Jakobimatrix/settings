@@ -1,6 +1,10 @@
 [submodule "src/tinyxml2"]
 	path = src/tinyxml2
 	url = https://github.com/Jakobimatrix/tinyxml2.git
+	branch = add_string_support
 [submodule "src/utils"]
 	path = src/utils
-	url = git@github.com:Jakobimatrix/utils.git
+	url = https://github.com/Jakobimatrix/utils.git
+[submodule "initRepo"]
+	path = initRepo
+	url = https://github.com/Jakobimatrix/initRepo.git

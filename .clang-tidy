@@ -25,3 +25,14 @@ performance-*,\
 -clang-diagnostic-c99-extensions,\
 -clang-diagnostic-double-promotion,\
 google-explicit-constructor"
+
+
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+FormatStyle:     none
+
+CheckOptions:
+  - key: readability-identifier-length.IgnoredVariableNames
+    value: 'x|y|z|dx|dy|dz'
+  - key: readability-identifier-length.IgnoredParameterNames
+    value: 'x|y|z|dx|dy|dz'

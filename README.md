@@ -27,6 +27,7 @@ You can define a sanity check function for the variable.
  
 ## Dependencies:
  * [tinyxml2](https://github.com/leethomason/tinyxml2). (included as submodule)
+    * TODO well that is not quiet true, I added support for std::string... [std::string](https://github.com/Jakobimatrix/tinyxml2/tree/add_string_support) Lets find a way to use the original sauce but still be able to use std::string and std::wstring
  * [utils](https://github.com/Jakobimatrix/utils). (included as submodule)
  
 ## How to use:
@@ -104,3 +105,61 @@ your_class.reloadAllFromFile();
 ```
 	
  
+## TODO
+### [settings.hpp](file:///home/jakob/projects/settings/src/settings/include/settings/settings.hpp)
+
+Here are some possible vulnerabilities and risks in your `Settings` class:
+
+#### 1. **Unchecked Use of `assert` for Error Handling**
+- `assert` is used for error conditions (e.g., missing XML elements, duplicate names). In release builds, `assert` is typically disabled, so these checks will not run. This can lead to undefined behavior or silent failures in production.
+  - **Recommendation:** Use exceptions or explicit error handling for critical checks.
+
+#### 2. **Unchecked Return Values and Error Handling**
+- Many functions rely on TinyXML2's return codes, but sometimes errors are only checked with `assert` or not at all.
+- In `save()`, if an XML element is missing, it asserts but does not recover or throw.
+  - **Recommendation:** Always check return values and handle errors robustly, especially for file I/O and XML parsing.
+
+#### 3. **Potential for Null Pointer Dereference**
+- The code assumes that `settings` and XML elements are always valid after certain operations. If XML parsing fails or the structure is unexpected, this could lead to dereferencing null pointers.
+  - **Recommendation:** Add explicit null checks and error handling.
+
+#### 4. **Use of `std::advance` Without Bounds Checking**
+- In several places, `std::advance` is used on pointers or iterators without checking if the resulting pointer/iterator is valid.
+  - **Recommendation:** Ensure that advancing pointers/iterators does not go out of bounds.
+
+#### 5. **Use of `std::wstring_convert` (Deprecated in C++17 and Later)**
+- The code uses `std::wstring_convert`, which is deprecated and may be removed in future C++ standards.
+  - **Recommendation:** Consider using alternative libraries for UTF-8 conversion (e.g., ICU, `std::codecvt` with care, or platform-specific APIs).
+
+#### 6. **Potential Data Truncation**
+- Comments mention that strings longer than a certain length will be cropped, but there is no enforcement or warning in the code.
+  - **Recommendation:** Explicitly check and handle string length limits.
+
+#### 7. **No Thread Safety**
+- The class is not thread-safe. If accessed from multiple threads, data races may occur.
+  - **Recommendation:** Document this or add synchronization if needed.
+
+#### 8. **No Input Sanitization for File Paths**
+- File paths are taken directly from user input or function arguments. There is no validation or sanitization, which could allow path traversal or other file system attacks.
+  - **Recommendation:** Validate and sanitize file paths before use.
+
+#### 9. **Potential for Resource Leaks**
+- If exceptions are thrown after file or resource allocation but before cleanup, resources may leak.
+  - **Recommendation:** Use RAII and smart pointers consistently.
+
+#### 10. **Use of `std::filesystem::copy_file` Without Exception Handling**
+- If `copy_file` or `remove` fails, the error is not always handled robustly.
+  - **Recommendation:** Wrap file operations in try/catch blocks and handle errors gracefully.
+
+#### 11. **No Protection Against XML Entity Expansion Attacks**
+- If the XML files are user-controlled, there is a risk of XML entity expansion (billion laughs) or similar attacks.
+  - **Recommendation:** Ensure TinyXML2 is configured to avoid dangerous XML features.
+
+#### 12. **No Validation of XML Structure**
+- The code assumes the XML structure matches expectations. Malformed or malicious XML could cause undefined behavior.
+  - **Recommendation:** Validate XML structure before processing.
+
+---
+
+**Summary:**  
+The main risks are unchecked error conditions, reliance on `assert`, potential null dereferences, lack of input validation, and no thread safety. For production code, replace `assert` with robust error handling, validate all inputs, check all return values, and consider thread safety and resource management.
