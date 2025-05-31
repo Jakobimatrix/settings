@@ -21,8 +21,8 @@ You can define a sanity check function for the variable.
  * arrays and (const size) vectors of thouse types
  * most stl container
  * In generel every class/structure where the members are stored tightly packed in an array like:
-     * Eigen: `put<double, 3>(eigen_vactor3d.x(), "eigen_vector3d")`
-     * glm:   `put<float, 3>(glm_vec3[0], "glm_vec3d")` 
+     * Eigen: `put<double, 3>(eigen_vactor3d.data(), "eigen_vector3d")`
+     * glm:   `put<float, 3>(&(glm_vec3[0]), "glm_vec3d")` 
  * You can easily add support for other types or even structs by provideing parser from and to that type. search for **&lt;TYPE_SUPPORT&gt;** in *include/settings.hpp* to find all places where you have to add some functionality.
  
 ## Dependencies:
@@ -35,20 +35,14 @@ You can define a sanity check function for the variable.
     * `git clone ...`
     * `cd settings`
     * `git submodule update --init --recursive`
- 2. (This step is not necessary) To avoid getting flodded with warnings from tinyxml2 I recomend to install it
-    * `cd src/tinyxml2/ && mkdir build && cd build`
-    * `cmake -DCMAKE_BUILD_TYPE=RELEASE ..`
-    * `sudo make install`
- 3. Include the library (header only) using the provided CMakeLists.txt or just include the relative path: 
-    * e.g: `#include "settings/include/settings.hpp"`
- 4. (This step is not necessary) There is a bash script to build and run the unit tests for tinyxml2 and the Settings class.
-    * requires boost to be installed (works with 1.65.1)
-    * `./buildAndRunTests.sh`
- 5. (This step is not necessary) There is an example in example.cpp.
-    * build it: `g++ -std=gnu++17 -I src/utils/include src/tinyxml2/tinyxml2.cpp example.cpp -o run_example`
-    * have a look at `example.cpp`
-    * then run it with `./run_example`
- 6. Make sure to define yor local environment using `#include <local.h>`. E.g defining `std::locale("C");` To make sure that floating point numbers always get stored with the same decimal seperator. Otherwise different environments might use different seperators!
+ 2. Include the library (header only) using the provided CMakeLists.txt and link against **settings_lib_2.0.0**
+ 3. (This step is not necessary) There is a bash script to build and run the unit tests for tinyxml2 and the Settings class.
+    * `./build.sh -d -c -t` You need to set the compiler paths inside `build.sh` first.
+ 4. (This step is not necessary) There is an example in `src/executables/src/example.cpp`.
+    * build it: like step 3. 
+    * have a look at `src/executables/src/example.cpp`
+    * then run it `./build-*/src/executables/example` 
+ 5. Make sure to define yor local environment using `#include <local.h>`. E.g defining `std::locale("C");` To make sure that floating point numbers always get stored with the same decimal seperator. Otherwise different environments might use different seperators!
     
   ## Runntime Errors:
  *  The following functions throw runtime errors (Happens when parsing xml file goes wrong.)
@@ -105,10 +99,10 @@ your_class.reloadAllFromFile();
 ```
 	
  
-## TODO
-### [settings.hpp](file:///home/jakob/projects/settings/src/settings/include/settings/settings.hpp)
+## TODOs
+### [settings.hpp](src/settings/include/settings/settings.hpp)
 
-Here are some possible vulnerabilities and risks in your `Settings` class:
+Here are some possible vulnerabilities and risks in `Settings` class:
 
 #### 1. **Unchecked Use of `assert` for Error Handling**
 - `assert` is used for error conditions (e.g., missing XML elements, duplicate names). In release builds, `assert` is typically disabled, so these checks will not run. This can lead to undefined behavior or silent failures in production.
@@ -159,7 +153,3 @@ Here are some possible vulnerabilities and risks in your `Settings` class:
 - The code assumes the XML structure matches expectations. Malformed or malicious XML could cause undefined behavior.
   - **Recommendation:** Validate XML structure before processing.
 
----
-
-**Summary:**  
-The main risks are unchecked error conditions, reliance on `assert`, potential null dereferences, lack of input validation, and no thread safety. For production code, replace `assert` with robust error handling, validate all inputs, check all return values, and consider thread safety and resource management.
