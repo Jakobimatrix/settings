@@ -26,9 +26,11 @@ if (NOT DEFINED PROJECT_NAME)
 
     # ===== Fuzzing =====
     include(initRepo/cmake/ClangFuzzyTests.cmake)
+
+    # ===== CTest with Catch2 =====
+    setup_catch2_and_ctest()
 endif()
 
-enable_testing()
 
 if (BUILD_TESTING)
     set(tinyxml2_BUILD_TESTING TRUE)

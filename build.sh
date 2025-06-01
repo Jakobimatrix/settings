@@ -112,9 +112,11 @@ fi
 if [[ "$COMPILER" == "g++" ]]; then
     COMPILER_PATH="$GCC_CPP_PATH"
     CC_PATH="$GCC_C_PATH"
+    COMPILER_NAME="gcc"
 elif [[ "$COMPILER" == "clang++" ]]; then
     COMPILER_PATH="$CLANG_CPP_PATH"
     CC_PATH="$CLANG_C_PATH"
+    COMPILER_NAME="clang"
 else
     echo "Error: $COMPILER not valid input."
     exit 1
