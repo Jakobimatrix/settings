@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # Define project if not already defined (useful for subproject inclusion)
 if (NOT DEFINED PROJECT_NAME)
-    project(<MY_PROJECT> LANGUAGES CXX)
+    project(settings LANGUAGES CXX)
 
     # This variable must exist!
     set(ENVIRONMENT_SETTINGS "ProjectSettings")
