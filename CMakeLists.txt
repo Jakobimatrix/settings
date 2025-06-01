@@ -28,6 +28,7 @@ if (NOT DEFINED PROJECT_NAME)
     include(initRepo/cmake/ClangFuzzyTests.cmake)
 
     # ===== CTest with Catch2 =====
+    enable_testing()
     setup_catch2_and_ctest()
 endif()
 
