@@ -18,7 +18,10 @@ if(NOT DEFINED LIBRARY_LIB_VERSION)
       ${ENVIRONMENT_SETTINGS}
     )
 
-    target_include_directories(${LIB_NAME}_${LIBRARY_LIB_VERSION} INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+    target_include_directories(${LIB_NAME}_${LIBRARY_LIB_VERSION} INTERFACE
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>
+    )
 
 elseif(LIBRARY_LIB_VERSION STREQUAL LIB_VERSION)
     # LIBRARY_LIB_VERSION is defined and matches LIB_VERSION
