@@ -87,8 +87,11 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-if [[ -z "$LIST_COMPILERS" ]]; then
+if [[ "$LIST_COMPILERS" == true ]]; then
     list_available_compiler
+    if [[ -z "$BUILD_TYPE" ]]; then
+        exit 0
+    fi
 fi
 
 # Validate build type

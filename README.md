@@ -1,4 +1,14 @@
 # settings
+
+[![C/C++ CI](https://github.com/Jakobimatrix/settings/actions/workflows/ubuntu_build_test.yml/badge.svg?branch=main)](https://github.com/Jakobimatrix/settings/actions/workflows/ubuntu_build_test.yml)
+
+ - OS: Ubuntu 24.04
+ - compiler: clang 19, gcc 13
+ - debug + release
+ - tests
+
+ ---
+
 A header only library to inherit from: Supports saving member variables to file and loading from file. It uses [tinyxml2](https://github.com/leethomason/tinyxml2).
 The files can be edited and thus variables can be changed without the need to rebuild.
 
