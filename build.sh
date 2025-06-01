@@ -172,6 +172,13 @@ cmake --build . -- -j$(nproc)
 if [[ "$ENABLE_TESTS" == "ON" ]]; then
     echo "Running ctest --output-on-failure"
     ctest --output-on-failure
+
+    # Check if any tests were found
+    NUM_TESTS=$(ctest -N | grep -c "Test #[0-9]\+:" || true)
+    if [[ "$NUM_TESTS" -eq 0 ]]; then
+        echo "ERROR: No tests were found or executed!"
+        exit 2
+    fi
 fi
 
 # Install if requested
