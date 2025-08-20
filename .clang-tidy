@@ -1,38 +1,32 @@
-Checks: "bugprone-*,\
-clang-analyzer-*,\
-modernize-*,\
--modernize-use-bool-literals,\
--modernize-pass-by-value,\
--modernize-use-auto,\
--modernize-raw-string-literal,\
--modernize-return-braced-init-list,\
-cppcoreguidelines-*,\
--cppcoreguidelines-pro-type-vararg,\
--cppcoreguidelines-pro-bounds-array-to-pointer-decay,\
-misc-*,\
-llvm-namespace-comment,\
-readability-*,\
--readability-implicit-bool-cast,\
--readability-else-after-return,\
--readability-redundant-declaration,\
--readability-named-parameter,\
--readability-braces-around-statements,\
--readability-implicit-bool-conversion,\
-performance-*,\
--clang-analyzer-core.CallAndMessage,\
--clang-analyzer-security.FloatLoopCounter,\
--clang-diagnostic-zero-as-null-pointer-constant,\
--clang-diagnostic-c99-extensions,\
--clang-diagnostic-double-promotion,\
-google-explicit-constructor"
-
+Checks: |
+  bugprone-*,
+  clang-analyzer-*,
+  modernize-*,
+  -modernize-pass-by-value,
+  -modernize-use-auto,
+  -modernize-return-braced-init-list,
+  -modernize-use-trailing-return-type,
+  cppcoreguidelines-*,
+  misc-*,
+  llvm-namespace-comment,
+  readability-*,
+  performance-*,
+  # ---- disable diagnostics also found by the compiler ----
+  -clang-diagnostic-*,
+  
+  # ---- disable Aliases CLANG 19 https://stackoverflow.com/questions/61457558/do-clang-tidy-check-aliases-repeat-the-same-check ----
+  
+  -bugprone-narrowing-conversions,-cert-con36-c,-cert-con54-cpp,-cert-ctr56-cpp,-cert-dcl03-c,-cert-dcl16-c,-cert-dcl37-c,-cert-dcl51-cpp,-cert-dcl54-cpp,-cert-dcl59-cpp,-cert-err09-cpp,-cert-err61-cpp,-cert-exp42-c,-cert-fio38-c,-cert-flp37-c,-cert-int09-c,-cert-msc24-c,-cert-msc30-c,-cert-msc32-c,-cert-msc33-c,-cert-msc54-cpp,-cert-oop11-cpp,-cert-oop54-cpp,-cert-pos44-c,-cert-pos47-c,-cert-sig30-c,-cert-str34-c,-clang-analyzer-core.BitwiseShift,-clang-analyzer-core.CallAndMessage,-clang-analyzer-core.DivideZero,-clang-analyzer-core.NonNullParamChecker,-clang-analyzer-core.NullDereference,-clang-analyzer-core.StackAddressEscape,-clang-analyzer-core.UndefinedBinaryOperatorResult,-clang-analyzer-core.VLASize,-clang-analyzer-core.uninitialized.ArraySubscript,-clang-analyzer-core.uninitialized.Assign,-clang-analyzer-core.uninitialized.Branch,-clang-analyzer-core.uninitialized.CapturedBlockVariable,-clang-analyzer-core.uninitialized.NewArraySize,-clang-analyzer-core.uninitialized.UndefReturn,-clang-analyzer-cplusplus.ArrayDelete,-clang-analyzer-cplusplus.InnerPointer,-clang-analyzer-cplusplus.Move,-clang-analyzer-cplusplus.NewDelete,-clang-analyzer-cplusplus.NewDeleteLeaks,-clang-analyzer-cplusplus.PlacementNew,-clang-analyzer-cplusplus.PureVirtualCall,-clang-analyzer-cplusplus.StringChecker,-clang-analyzer-deadcode.DeadStores,-clang-analyzer-fuchsia.HandleChecker,-clang-analyzer-nullability.NullPassedToNonnull,-clang-analyzer-nullability.NullReturnedFromNonnull,-clang-analyzer-nullability.NullableDereferenced,-clang-analyzer-nullability.NullablePassedToNonnull,-clang-analyzer-nullability.NullableReturnedFromNonnull,-clang-analyzer-optin.core.EnumCastOutOfRange,-clang-analyzer-optin.cplusplus.UninitializedObject,-clang-analyzer-optin.cplusplus.VirtualCall,-clang-analyzer-optin.mpi.MPI-Checker,-clang-analyzer-optin.osx.OSObjectCStyleCast,-clang-analyzer-optin.osx.cocoa.localizability.EmptyLocalizationContextChecker,-clang-analyzer-optin.osx.cocoa.localizability.NonLocalizedStringChecker,-clang-analyzer-optin.performance.GCDAntipattern,-clang-analyzer-optin.performance.Padding,-clang-analyzer-optin.portability.UnixAPI,-clang-analyzer-optin.taint.TaintedAlloc,-clang-analyzer-osx.API,-clang-analyzer-osx.MIG,-clang-analyzer-osx.NumberObjectConversion,-clang-analyzer-osx.OSObjectRetainCount,-clang-analyzer-osx.ObjCProperty,-clang-analyzer-osx.SecKeychainAPI,-clang-analyzer-osx.cocoa.AtSync,-clang-analyzer-osx.cocoa.AutoreleaseWrite,-clang-analyzer-osx.cocoa.ClassRelease,-clang-analyzer-osx.cocoa.Dealloc,-clang-analyzer-osx.cocoa.IncompatibleMethodTypes,-clang-analyzer-osx.cocoa.Loops,-clang-analyzer-osx.cocoa.MissingSuperCall,-clang-analyzer-osx.cocoa.NSAutoreleasePool,-clang-analyzer-osx.cocoa.NSError,-clang-analyzer-osx.cocoa.NilArg,-clang-analyzer-osx.cocoa.NonNilReturnValue,-clang-analyzer-osx.cocoa.ObjCGenerics,-clang-analyzer-osx.cocoa.RetainCount,-clang-analyzer-osx.cocoa.RunLoopAutoreleaseLeak,-clang-analyzer-osx.cocoa.SelfInit,-clang-analyzer-osx.cocoa.SuperDealloc,-clang-analyzer-osx.cocoa.UnusedIvars,-clang-analyzer-osx.cocoa.VariadicMethodTypes,-clang-analyzer-osx.coreFoundation.CFError,-clang-analyzer-osx.coreFoundation.CFNumber,-clang-analyzer-osx.coreFoundation.CFRetainRelease,-clang-analyzer-osx.coreFoundation.containers.OutOfBounds,-clang-analyzer-osx.coreFoundation.containers.PointerSizedValues,-clang-analyzer-security.FloatLoopCounter,-clang-analyzer-security.PutenvStackArray,-clang-analyzer-security.SetgidSetuidOrder,-clang-analyzer-security.cert.env.InvalidPtr,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,-clang-analyzer-security.insecureAPI.UncheckedReturn,-clang-analyzer-security.insecureAPI.bcmp,-clang-analyzer-security.insecureAPI.bcopy,-clang-analyzer-security.insecureAPI.bzero,-clang-analyzer-security.insecureAPI.decodeValueOfObjCType,-clang-analyzer-security.insecureAPI.getpw,-clang-analyzer-security.insecureAPI.gets,-clang-analyzer-security.insecureAPI.mkstemp,-clang-analyzer-security.insecureAPI.mktemp,-clang-analyzer-security.insecureAPI.rand,-clang-analyzer-security.insecureAPI.strcpy,-clang-analyzer-security.insecureAPI.vfork,-clang-analyzer-unix.API,-clang-analyzer-unix.BlockInCriticalSection,-clang-analyzer-unix.Errno,-clang-analyzer-unix.Malloc,-clang-analyzer-unix.MallocSizeof,-clang-analyzer-unix.MismatchedDeallocator,-clang-analyzer-unix.StdCLibraryFunctions,-clang-analyzer-unix.Stream,-clang-analyzer-unix.Vfork,-clang-analyzer-unix.cstring.BadSizeArg,-clang-analyzer-unix.cstring.NullArg,-clang-analyzer-valist.CopyToSelf,-clang-analyzer-valist.Uninitialized,-clang-analyzer-valist.Unterminated,-clang-analyzer-webkit.NoUncountedMemberChecker,-clang-analyzer-webkit.RefCntblBaseVirtualDtor,-clang-analyzer-webkit.UncountedLambdaCapturesChecker,-cppcoreguidelines-avoid-c-arrays,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-c-copy-assignment-signature,-cppcoreguidelines-explicit-virtual-functions,-cppcoreguidelines-macro-to-enum,-cppcoreguidelines-noexcept-destructor,-cppcoreguidelines-noexcept-move-operations,-cppcoreguidelines-noexcept-swap,-cppcoreguidelines-non-private-member-variables-in-classes,-cppcoreguidelines-use-default-member-init,-fuchsia-header-anon-namespaces,-google-readability-braces-around-statements,-google-readability-function-size,-google-readability-namespace-comments,-hicpp-avoid-c-arrays,-hicpp-avoid-goto,-hicpp-braces-around-statements,-hicpp-deprecated-headers,-hicpp-explicit-conversions,-hicpp-function-size,-hicpp-invalid-access-moved,-hicpp-member-init,-hicpp-move-const-arg,-hicpp-named-parameter,-hicpp-new-delete-operators,-hicpp-no-array-decay,-hicpp-no-malloc,-hicpp-noexcept-move,-hicpp-special-member-functions,-hicpp-static-assert,-hicpp-undelegated-constructor,-hicpp-uppercase-literal-suffix,-hicpp-use-auto,-hicpp-use-emplace,-hicpp-use-equals-default,-hicpp-use-equals-delete,-hicpp-use-noexcept,-hicpp-use-nullptr,-hicpp-use-override,-hicpp-vararg,-llvm-else-after-return,-llvm-qualified-auto
 
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
 FormatStyle:     none
 
 CheckOptions:
+  # min variable length is 3, but I allow these because of math
   - key: readability-identifier-length.IgnoredVariableNames
-    value: 'x|y|z|dx|dy|dz'
+    value: "x|y|z|dx|dy|dz|t|i|n|k"
   - key: readability-identifier-length.IgnoredParameterNames
-    value: 'x|y|z|dx|dy|dz'
+    value: "x|y|z|dx|dy|dz|t|i|n|k"
+  - key: modernize-use-trailing-return-type.LambdaStyle
+    value: all_except_auto

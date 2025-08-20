@@ -1,62 +1,383 @@
 name: C/C++ CI
 
+permissions:
+  contents: read
+  checks: write
+
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, dev, master, release ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main, dev, master, release ]
 
 jobs:
-  build:
+
+  setup:
     runs-on: ubuntu-latest
-
+    outputs:
+      run_id: ${{ github.run_id }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
 
-    - name: Update submodules
-      run: git submodule update --init --recursive
+      - name: Create workspace tar (exclude .git and IDE stuff)
+        run: |
+          set -e
+          touch workspace.tar
+          touch workspace.tar.gz
+          tar --exclude='workspace.tar.gz' --exclude='workspace.tar' --exclude-vcs --exclude='**/.idea' --exclude='**/.vscode' --exclude='**/*.log' -cf workspace.tar .
+          tar --append -f workspace.tar .git
+          gzip -f workspace.tar
 
-    - name: Install GCC 13
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-13 g++-13
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workspace
+          path: workspace.tar.gz
+          retention-days: 1
+          
+      - name: make sure scripts exist
+        run: |
+          set -e
+          source initRepo/.environment || exit 1
+          source initRepo/scripts/ensureToolVersion.sh || exit 1
 
-    - name: Set up GCC 13 as default
-      run: |
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
 
-    - name: Install Clang 19
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang-19 lld
+  shellcheck:
+    runs-on: ubuntu-latest
+    needs: setup
+    outputs:
+      failed: ${{ steps.shell_result.outputs.failed }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: workspace
+          path: .
 
-    - name: Ensure ld.lld is available for Clang
-      run: |
-        if ! command -v ld.lld &>/dev/null; then
-          sudo ln -s /usr/bin/ld.lld-19 /usr/bin/ld.lld
-        fi
+      - run: |
+          set -e
+          tar -xzf workspace.tar.gz -C .
 
-    - name: Set up Clang 19 as default
-      run: |
-        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 100
-        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 100
+      - name: Install environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
 
-    - name: Build and test with GCC 13
-      run: ./build.sh -c -d -t --compiler gcc
+      - id: shell_result
+        run: |
+          set -e
+          ./initRepo/scripts/checkShellCheck.sh
 
-    - name: Build and test with Clang 19
-      run: ./build.sh -c -d -t --compiler clang
 
-    - name: Build fuzzer with Clang 19
-      run: ./build.sh -d -f --compiler clang 
+  clang_format:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: workspace
+          path: .
 
-    - name: Build release and test with GCC 13
-      run: ./build.sh -c -r -t --compiler gcc
+      - run: |
+          set -e
+          tar -xzf workspace.tar.gz -C .
 
-    - name: Build release and test with Clang 19
-      run: ./build.sh -c -r -t --compiler clang
+      - name: Install environment
+        run: |
+          set -e
+          source initRepo/.environment
+          if [ -f .environment ]; then source .environment; fi
+          sudo apt-get install -y clang-format-${CLANG_FORMAT_VERSION}
+          source initRepo/scripts/ensureToolVersion.sh
+          ensure_tool_versioned clang-format "${CLANG_FORMAT_VERSION}"
 
-    - name: Build release fuzzer with Clang 19
-      run: ./build.sh -r -f --compiler clang
+      - id: format_result
+        run: |
+          set -e
+          ./initRepo/scripts/checkClangFormat.sh
+
+
+  gcc_compile:
+    runs-on: ubuntu-latest
+    needs: setup
+    outputs:
+      uploaded: ${{ steps.set_result.outputs.uploaded }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: workspace
+          path: .
+
+      - run: |
+          set -e
+          tar -xzf workspace.tar.gz -C .
+
+      - name: Install environment
+        run: |
+          set -e
+          source initRepo/.environment
+          if [ -f .environment ]; then source .environment; fi
+          sudo apt-get install -y gcc-${GCC_VERSION} g++-${GCC_VERSION}
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_VERSION} 100 || true
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${GCC_VERSION} 100 || true
+          source initRepo/scripts/ensureToolVersion.sh
+          ensure_tool_versioned g++ "${GCC_VERSION}"
+          ensure_tool_versioned gcc "${GCC_VERSION}"
+
+      - name: Run GCC build
+        run: |
+          set -e
+          ./initRepo/scripts/build.sh -c -d -t -g --compiler gcc # debug + tests + code coverage -> used by "gcc_unit_tests"
+          ./initRepo/scripts/build.sh -c -r -t --compiler gcc    # release + tests -> used by "gcc_unit_tests"
+
+      - id: set_result
+        run: |
+          set -e
+          source initRepo/.environment
+          if [ -f .environment ]; then source .environment; fi
+          if [ -d "build-gcc-${GCC_VERSION}-debug" ] && [ -d "build-gcc-${GCC_VERSION}-release" ]; then
+            tar -czf gcc_debug_build.tar.gz build-gcc-${GCC_VERSION}-debug
+            tar -czf gcc_release_build.tar.gz build-gcc-${GCC_VERSION}-release
+          else
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gcc-debug-build
+          path: gcc_debug_build.tar.gz
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gcc-release-build
+          path: gcc_release_build.tar.gz
+          retention-days: 1
+
+
+  gcc_unit_tests_and_coverage:
+    runs-on: ubuntu-latest
+    needs: [gcc_compile]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: workspace
+          path: .
+
+      - run: |
+          set -e
+          tar -xzf workspace.tar.gz -C .
+
+      - name: Install environment
+        run: |
+          set -e
+          source initRepo/.environment
+          if [ -f .environment ]; then source .environment; fi
+          echo "GCC_VERSION=$GCC_VERSION" >> $GITHUB_ENV
+          sudo apt-get update
+          sudo apt-get install -y gcovr lcov
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: gcc-debug-build
+          path: .
+
+      - run: |
+          set -e
+          tar -xzf gcc_debug_build.tar.gz -C .
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: gcc-release-build
+          path: .
+
+      - run: |
+          set -e
+          tar -xzf gcc_release_build.tar.gz -C .
+
+      - name: Run GCC unit tests
+        run: |
+          set -e
+          ./initRepo/scripts/build.sh -s -T -d -J --compiler gcc  # skip cmake and build, + debug + run Tests in Junit format output (+ coverage report)
+          ./initRepo/scripts/build.sh -s -T -r -J --compiler gcc  # skip cmake and build, + release + run Tests in Junit format output
+
+      - name: Publish GCC test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            build-gcc-${{ env.GCC_VERSION }}-debug/test_results.xml
+            build-gcc-${{ env.GCC_VERSION }}-release/test_results.xml
+            
+      - name: Generate coverage report
+        run: |
+          gcovr --gcov-executable gcov-${{ env.GCC_VERSION }} \
+            -r . build-gcc-${{ env.GCC_VERSION }}-debug/src \
+            --exclude '.*_deps/.*' --gcov-ignore-parse-errors \
+            --xml-pretty -o coverage.xml
+
+      - name: Publish coverage summary
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage.xml
+          badge: true
+          format: markdown
+          output: file
+      - name: Append coverage to summary # workaround: publish-unit-test-result-action overwrites the summary
+        run: |
+          echo "## Code Coverage" >> $GITHUB_STEP_SUMMARY
+          cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+
+
+  clang_compile:
+    runs-on: ubuntu-latest
+    needs: setup
+    outputs:
+      uploaded: ${{ steps.set_result.outputs.uploaded }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: workspace
+          path: .
+
+      - run: |
+          set -e
+          tar -xzf workspace.tar.gz -C .
+
+      - name: Install environment
+        run: |
+          set -e
+          source initRepo/.environment
+          if [ -f .environment ]; then source .environment; fi
+          sudo apt-get install -y clang-${CLANG_VERSION} lld
+          if ! command -v ld.lld &>/dev/null; then
+            sudo ln -s /usr/bin/ld.lld-${CLANG_VERSION} /usr/bin/ld.lld || true
+          fi
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${CLANG_VERSION} 100 || true
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${CLANG_VERSION} 100 || true
+          source initRepo/scripts/ensureToolVersion.sh
+          ensure_tool_versioned clang++ "${CLANG_VERSION}"
+          ensure_tool_versioned clang "${CLANG_VERSION}"
+
+      - name: Run Clang builds
+        run: |
+          set -e
+          ./initRepo/scripts/build.sh -c -d -f --compiler clang # debug + fuzzer
+          ./initRepo/scripts/build.sh -d -t --compiler clang    # debug + tests -> used by "clang_unit_tests"
+          ./initRepo/scripts/build.sh -c -r -f --compiler clang # release + fuzzer
+          ./initRepo/scripts/build.sh -r -t --compiler clang    # release + tests -> used by "clang_unit_tests"
+
+      - id: set_result
+        run: |
+          set -e
+          source initRepo/.environment
+          if [ -f .environment ]; then source .environment; fi
+          if [ -d "build-clang-${CLANG_VERSION}-debug" ] && [ -d "build-clang-${CLANG_VERSION}-release" ]; then
+            tar -czf clang_debug_build.tar.gz build-clang-${CLANG_VERSION}-debug
+            tar -czf clang_release_build.tar.gz build-clang-${CLANG_VERSION}-release
+          else
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clang-debug-build
+          path: clang_debug_build.tar.gz
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clang-release-build
+          path: clang_release_build.tar.gz
+          retention-days: 1
+
+
+  clang_unit_tests:
+    runs-on: ubuntu-latest
+    needs: [clang_compile]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: workspace
+          path: .
+
+      - run: |
+          set -e
+          tar -xzf workspace.tar.gz -C .
+
+      - name: Install environment
+        run: |
+          set -e
+          source initRepo/.environment
+          if [ -f .environment ]; then source .environment; fi
+          echo "CLANG_VERSION=$CLANG_VERSION" >> $GITHUB_ENV
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: clang-debug-build
+          path: .
+
+      - run: |
+          set -e
+          tar -xzf clang_debug_build.tar.gz -C .
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: clang-release-build
+          path: .
+
+      - run: |
+          set -e
+          tar -xzf clang_release_build.tar.gz -C .
+
+      - name: Run Clang unit tests
+        run: |
+          ./initRepo/scripts/build.sh -s -T -d -J --compiler clang
+          ./initRepo/scripts/build.sh -s -T -r -J --compiler clang
+
+      - name: Publish Clang test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            build-clang-${{ env.CLANG_VERSION }}-debug/test_results.xml
+            build-clang-${{ env.CLANG_VERSION }}-release/test_results.xml
+
+
+  clang_tidy:
+    runs-on: ubuntu-latest
+    needs: [clang_compile]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: workspace
+          path: .
+
+      - run: |
+          set -e
+          tar -xzf workspace.tar.gz -C .
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: clang-debug-build
+          path: .
+    
+      - run: |
+          set -e
+          tar -xzf clang_debug_build.tar.gz -C .
+
+      - name: Install environment
+        run: |
+          set -e
+          source initRepo/.environment
+          if [ -f .environment ]; then source .environment; fi
+          sudo apt-get install -y clang-tidy-${CLANG_TIDY_VERSION}
+          source initRepo/scripts/ensureToolVersion.sh
+          ensure_tool_versioned clang-tidy "${CLANG_TIDY_VERSION}"
+
+      - name: tidy_result
+        run: |
+          set -e
+          ./initRepo/scripts/checkClangTidy.sh
+
