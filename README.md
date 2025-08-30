@@ -41,20 +41,20 @@ You can define a sanity check function for the variable.
  * [utils](https://github.com/Jakobimatrix/utils). (included as submodule)
  
 ## How to use:
- 1. Clone the repository and update the submodule
+ 1. Clone this repository (include it as submodule or folder in your project) and update the submodule
     * `git clone ...`
     * `cd settings`
     * `git submodule update --init --recursive`
  2. Include the library (header only) using the provided CMakeLists.txt and link against **settings_lib_2.0.0**
  3. (This step is not necessary) There is a bash script to build and run the unit tests for tinyxml2 and the Settings class.
-    * `./build.sh -d -c -t` You need to set the compiler paths inside `build.sh` first.
+    * `.initRepo/scripts/build.sh -d -c -t -T --compiler <clang/gcc>` You can change the compiler version in `initRepo/.environment`.
  4. (This step is not necessary) There is an example in `src/executables/src/example.cpp`.
     * build it: like step 3. 
     * have a look at `src/executables/src/example.cpp`
     * then run it `./build-*/src/executables/example` 
- 5. Make sure to define yor local environment using `#include <local.h>`. E.g defining `std::locale("C");` To make sure that floating point numbers always get stored with the same decimal seperator. Otherwise different environments might use different seperators!
+ 5. Make sure to define yor local environment using `#include <local.h>`. E.g defining `std::locale::global(std::locale("C"));` in your main. This makes sure that floating point numbers always get stored with the same decimal seperator. Otherwise different environments might use different seperators!
     
-  ## Runntime Errors:
+  ## Runtime Errors:
  *  The following functions throw runtime errors (Happens when parsing xml file goes wrong.)
     * `put<T>(T&, std::string&, bool)` here the throw can be supressed setting *bool* to true. Happens if the file had an entry of that variable but was not able to read it. If supressed or catched, the member will have its default value.
     * `reloadAllFromFile()`. Will try to load every found member variable in the file given before. Throws if at least one variable was found (had an entry) but could not be parsed. If you catch and continue, all variables which could be parsed will have the parsed value, others will have their old value.
@@ -109,7 +109,7 @@ your_class.reloadAllFromFile();
 ```
 	
  
-## TODOs
+## TODOs (from KI generated and not verified)
 ### [settings.hpp](src/settings/include/settings/settings.hpp)
 
 Here are some possible vulnerabilities and risks in `Settings` class:

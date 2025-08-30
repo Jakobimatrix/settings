@@ -28,26 +28,26 @@ static const std::string SAVE_FILE_MOVE = "ExampleSettingsMemberVariables2.xml";
 // NOLINTBEGIN (modernize-avoid-c-arrays) This is a test that makes sure this works too.
 // NOLINTBEGIN (readability-function-cognitive-complexity) I blame the catch2 Macros
 // NOLINTBEGIN (cppcoreguidelines-pro-bounds-constant-array-index) These are constexpr. This is save.
-constexpr bool DEF_BOOL[3]         = {true, false, true};
-static const std::string EXAMPLE_BOOL    = "ExampleBool";
-constexpr int DEF_INT[3]           = {-5, 20009, -28041994};
-static const std::string EXAMPLE_INT     = "ExampleInt";
-constexpr unsigned int DEF_UINT[3] = {42, 24, 2020};
-static const std::string EXAMPLE_UINT    = "ExampleUint";
-constexpr float DEF_FLOAT[3]       = {1.F / 3.F, 2.F / 3.F, 999999999.F};
-static const std::string EXAMPLE_FLOAT   = "ExampleFloat";
-constexpr double DEF_DOUBLE[3]     = {2. / 5., 3. / 5., 3.141592653589793};
-static const std::string EXAMPLE_DOUBLE  = "ExampleDouble";
-std::string DEF_STR[3]             = {"abc", "de", "fghi"};
-static const std::string EXAMPLE_STRING  = "ExampleStr";
-std::wstring DEF_WSTR[3]           = {L"Hello, 世界!", L"öüäß", L"êéè"};
+constexpr bool DEF_BOOL[3]              = {true, false, true};
+static const std::string EXAMPLE_BOOL   = "ExampleBool";
+constexpr int DEF_INT[3]                = {-5, 20009, -28041994};
+static const std::string EXAMPLE_INT    = "ExampleInt";
+constexpr unsigned int DEF_UINT[3]      = {42, 24, 2020};
+static const std::string EXAMPLE_UINT   = "ExampleUint";
+constexpr float DEF_FLOAT[3]            = {1.F / 3.F, 2.F / 3.F, 999999999.F};
+static const std::string EXAMPLE_FLOAT  = "ExampleFloat";
+constexpr double DEF_DOUBLE[3]          = {2. / 5., 3. / 5., 3.141592653589793};
+static const std::string EXAMPLE_DOUBLE = "ExampleDouble";
+std::string DEF_STR[3]                  = {"abc", "de", "fghi"};
+static const std::string EXAMPLE_STRING = "ExampleStr";
+std::wstring DEF_WSTR[3]                = {L"Hello, 世界!", L"öüäß", L"êéè"};
 static const std::string EXAMPLE_WSTRING = "ExampleWStr";
 
 static constexpr int NUM_VALS = 5;
 constexpr std::array<bool, NUM_VALS> TEST_ARRAY_B = {{true, true, true, true, true}};
-static const std::string EXAMPLE_ARRAY_B               = "test_array_b";
+static const std::string EXAMPLE_ARRAY_B         = "test_array_b";
 constexpr std::array<int, NUM_VALS> TEST_ARRAY_I = {{-1, 2, -3, 4, -5}};
-static const std::string EXAMPLE_ARRAY_I               = "test_array_i";
+static const std::string EXAMPLE_ARRAY_I         = "test_array_i";
 constexpr std::array<unsigned int, NUM_VALS> TEST_ARRAY_UI = {
   {50, 0, 10010110, 01110011, 52368741}};
 static const std::string EXAMPLE_ARRAY_UI = "test_array_ui";
@@ -281,7 +281,7 @@ TEST_CASE("settings_test_types_load_and_save") {
     tinyxml2::XMLElement* pElement = settings->FirstChildElement(EXAMPLE_BOOL.c_str());
     REQUIRE(pElement != nullptr);
     bool test_b = false;
-    error = pElement->QueryBoolText(&test_b);
+    error       = pElement->QueryBoolText(&test_b);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_b == DEF_BOOL[i]);
     CHECK(es.exampleBool == DEF_BOOL[i]);
@@ -289,7 +289,7 @@ TEST_CASE("settings_test_types_load_and_save") {
     pElement = settings->FirstChildElement(EXAMPLE_INT.c_str());
     REQUIRE(pElement != nullptr);
     int test_i = 0;
-    error = pElement->QueryIntText(&test_i);
+    error      = pElement->QueryIntText(&test_i);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_i == DEF_INT[i]);
     CHECK(es.exampleInt == DEF_INT[i]);
@@ -297,7 +297,7 @@ TEST_CASE("settings_test_types_load_and_save") {
     pElement = settings->FirstChildElement(EXAMPLE_UINT.c_str());
     REQUIRE(pElement != nullptr);
     unsigned int test_ui = 0;
-    error = pElement->QueryUnsignedText(&test_ui);
+    error                = pElement->QueryUnsignedText(&test_ui);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_ui == DEF_UINT[i]);
     CHECK(es.exampleUint == DEF_UINT[i]);
@@ -305,7 +305,7 @@ TEST_CASE("settings_test_types_load_and_save") {
     pElement = settings->FirstChildElement(EXAMPLE_FLOAT.c_str());
     REQUIRE(pElement != nullptr);
     float test_f = 0.F;
-    error = pElement->QueryFloatText(&test_f);
+    error        = pElement->QueryFloatText(&test_f);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_f == Catch::Approx(DEF_FLOAT[i]).epsilon(TOLERANCE_FLOAT_APPROX));
     CHECK(es.exampleFloat == Catch::Approx(DEF_FLOAT[i]).epsilon(TOLERANCE_FLOAT_APPROX));
@@ -313,7 +313,7 @@ TEST_CASE("settings_test_types_load_and_save") {
     pElement = settings->FirstChildElement(EXAMPLE_DOUBLE.c_str());
     REQUIRE(pElement != nullptr);
     double test_d = 0.;
-    error = pElement->QueryDoubleText(&test_d);
+    error         = pElement->QueryDoubleText(&test_d);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_d == Catch::Approx(DEF_DOUBLE[i]).epsilon(TOLERANCE_DOUBLE_APPROX));
     CHECK(es.exampleDouble == Catch::Approx(DEF_DOUBLE[i]).epsilon(TOLERANCE_DOUBLE_APPROX));
@@ -321,7 +321,7 @@ TEST_CASE("settings_test_types_load_and_save") {
     pElement = settings->FirstChildElement(EXAMPLE_STRING.c_str());
     REQUIRE(pElement != nullptr);
     std::string test_c = "";
-    error = pElement->QueryStrText(&test_c);
+    error              = pElement->QueryStrText(&test_c);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_c == DEF_STR[i]);
     CHECK(es.exampleStr == DEF_STR[i]);
@@ -532,8 +532,7 @@ class ExampleSaneSettings : public SaneSettings {
     const bool dont_throw_bad_parsing = true;
     put<int>(&exampleInt, EXAMPLE_INT, dont_throw_bad_parsing, util::saneMinMax, RANGE_I);
     put<float>(&exampleFloat, EXAMPLE_FLOAT, dont_throw_bad_parsing, util::saneMinMax, RANGE_F);
-    put<double>(
-      &exampleDouble, EXAMPLE_DOUBLE, dont_throw_bad_parsing, util::saneMinMax, RANGE_D);
+    put<double>(&exampleDouble, EXAMPLE_DOUBLE, dont_throw_bad_parsing, util::saneMinMax, RANGE_D);
   }
 
   ~ExampleSaneSettings() {}
@@ -554,9 +553,10 @@ class ExampleSaneSettings : public SaneSettings {
     exampleDouble = -1. * std::numeric_limits<double>::infinity();
   }
 
-  static constexpr util::Range<int> RANGE_I{-10,100};
-  static constexpr util::Range<float> RANGE_F{0.001f,0.F};
-  static constexpr util::Range<double> RANGE_D{std::numeric_limits<double>::min(),std::numeric_limits<double>::max()};
+  static constexpr util::Range<int> RANGE_I{-10, 100};
+  static constexpr util::Range<float> RANGE_F{0.001f, 0.F};
+  static constexpr util::Range<double> RANGE_D{
+    std::numeric_limits<double>::min(), std::numeric_limits<double>::max()};
 };
 
 }  // namespace test
@@ -589,7 +589,7 @@ TEST_CASE("settings_test_sanitizer_saving") {
   pElement = settings->FirstChildElement(EXAMPLE_FLOAT.c_str());
   REQUIRE(pElement != nullptr);
   float test_f = 0.F;
-  error = pElement->QueryFloatText(&test_f);
+  error        = pElement->QueryFloatText(&test_f);
   REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
   CHECK(test_f == Catch::Approx(test::ExampleSaneSettings::RANGE_F.getMax()).epsilon(TOLERANCE_FLOAT_APPROX));
   CHECK(es.exampleFloat ==
@@ -598,7 +598,7 @@ TEST_CASE("settings_test_sanitizer_saving") {
   pElement = settings->FirstChildElement(EXAMPLE_DOUBLE.c_str());
   REQUIRE(pElement != nullptr);
   double test_d = 0.;
-  error = pElement->QueryDoubleText(&test_d);
+  error         = pElement->QueryDoubleText(&test_d);
   REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
   CHECK(test_d == Catch::Approx(test::ExampleSaneSettings::RANGE_D.getMax()).epsilon(TOLERANCE_DOUBLE_APPROX));
   CHECK(es.exampleDouble ==
@@ -709,7 +709,7 @@ using StlSettings =
   util::Settings<std::variant<std::vector<int>*, std::set<double>*, std::map<int, std::string>*, std::pair<int, std::string>*>>;
 class ExampleSettingsStlContainer : public StlSettings {
  public:
-  static constexpr util::Range<int>RANGE{100, -10};
+  static constexpr util::Range<int> RANGE{100, -10};
 
   ExampleSettingsStlContainer(const std::string& source_file_name)
       : StlSettings(source_file_name) {
