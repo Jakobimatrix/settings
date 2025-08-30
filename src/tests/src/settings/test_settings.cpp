@@ -1,3 +1,12 @@
+/**
+ * @file test_settings.cpp
+ * @brief contains the unit tests using catch2 for the Settings class.
+ *
+ * @date 30.08.2025
+ * @author Jakob Wandel
+ * @version 1.0
+ **/
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/catch_approx.hpp>
@@ -7,42 +16,48 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <map>
+#include <set>
 #include <settings/sanitizers.hpp>
 #include <settings/settings.hpp>
+#include <string>
 
-static std::string SAVE_FILE      = "ExampleSettingsMemberVariables.xml";
-static std::string SAVE_FILE_MOVE = "ExampleSettingsMemberVariables2.xml";
-
+static const std::string SAVE_FILE      = "ExampleSettingsMemberVariables.xml";
+static const std::string SAVE_FILE_MOVE = "ExampleSettingsMemberVariables2.xml";
+// NOLINTBEGIN (readability-magic-numbers) This test uses some random numbers, there is no value in giving them a name
+// NOLINTBEGIN (modernize-avoid-c-arrays) This is a test that makes sure this works too.
+// NOLINTBEGIN (readability-function-cognitive-complexity) I blame the catch2 Macros
+// NOLINTBEGIN (cppcoreguidelines-pro-bounds-constant-array-index) These are constexpr. This is save.
 constexpr bool DEF_BOOL[3]         = {true, false, true};
-static std::string EXAMPLE_BOOL    = "ExampleBool";
+static const std::string EXAMPLE_BOOL    = "ExampleBool";
 constexpr int DEF_INT[3]           = {-5, 20009, -28041994};
-static std::string EXAMPLE_INT     = "ExampleInt";
+static const std::string EXAMPLE_INT     = "ExampleInt";
 constexpr unsigned int DEF_UINT[3] = {42, 24, 2020};
-static std::string EXAMPLE_UINT    = "ExampleUint";
-constexpr float DEF_FLOAT[3]       = {1.f / 3.f, 2.f / 3.f, 999999999.f};
-static std::string EXAMPLE_FLOAT   = "ExampleFloat";
+static const std::string EXAMPLE_UINT    = "ExampleUint";
+constexpr float DEF_FLOAT[3]       = {1.F / 3.F, 2.F / 3.F, 999999999.F};
+static const std::string EXAMPLE_FLOAT   = "ExampleFloat";
 constexpr double DEF_DOUBLE[3]     = {2. / 5., 3. / 5., 3.141592653589793};
-static std::string EXAMPLE_DOUBLE  = "ExampleDouble";
+static const std::string EXAMPLE_DOUBLE  = "ExampleDouble";
 std::string DEF_STR[3]             = {"abc", "de", "fghi"};
-static std::string EXAMPLE_STRING  = "ExampleStr";
+static const std::string EXAMPLE_STRING  = "ExampleStr";
 std::wstring DEF_WSTR[3]           = {L"Hello, 世界!", L"öüäß", L"êéè"};
-static std::string EXAMPLE_WSTRING = "ExampleWStr";
+static const std::string EXAMPLE_WSTRING = "ExampleWStr";
 
 static constexpr int NUM_VALS = 5;
 constexpr std::array<bool, NUM_VALS> TEST_ARRAY_B = {{true, true, true, true, true}};
-static std::string EXAMPLE_ARRAY_B               = "test_array_b";
+static const std::string EXAMPLE_ARRAY_B               = "test_array_b";
 constexpr std::array<int, NUM_VALS> TEST_ARRAY_I = {{-1, 2, -3, 4, -5}};
-static std::string EXAMPLE_ARRAY_I               = "test_array_i";
+static const std::string EXAMPLE_ARRAY_I               = "test_array_i";
 constexpr std::array<unsigned int, NUM_VALS> TEST_ARRAY_UI = {
   {50, 0, 10010110, 01110011, 52368741}};
-static std::string EXAMPLE_ARRAY_UI = "test_array_ui";
-constexpr std::array<float, NUM_VALS> TEST_ARRAY_F = {{0.0000001f, 0.001f, 9999.f, 1, 0}};
-static std::string EXAMPLE_ARRAY_F = "test_array_f";
+static const std::string EXAMPLE_ARRAY_UI = "test_array_ui";
+constexpr std::array<float, NUM_VALS> TEST_ARRAY_F = {{0.0000001f, 0.001f, 9999.F, 1, 0}};
+static const std::string EXAMPLE_ARRAY_F = "test_array_f";
 constexpr std::array<double, NUM_VALS> TEST_ARRAY_D = {{10., 20., 30., 40., 50.}};
-static std::string EXAMPLE_ARRAY_D = "test_array_d";
+static const std::string EXAMPLE_ARRAY_D = "test_array_d";
 
-static std::string EXAMPLE_VECTOR_I = "test_vector_i";
-static std::string EXAMPLE_SET_D    = "test_set_d";
+static const std::string EXAMPLE_VECTOR_I = "test_vector_i";
+static const std::string EXAMPLE_SET_D    = "test_set_d";
 
 namespace test {
 
@@ -265,7 +280,7 @@ TEST_CASE("settings_test_types_load_and_save") {
 
     tinyxml2::XMLElement* pElement = settings->FirstChildElement(EXAMPLE_BOOL.c_str());
     REQUIRE(pElement != nullptr);
-    bool test_b;
+    bool test_b = false;
     error = pElement->QueryBoolText(&test_b);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_b == DEF_BOOL[i]);
@@ -273,7 +288,7 @@ TEST_CASE("settings_test_types_load_and_save") {
 
     pElement = settings->FirstChildElement(EXAMPLE_INT.c_str());
     REQUIRE(pElement != nullptr);
-    int test_i;
+    int test_i = 0;
     error = pElement->QueryIntText(&test_i);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_i == DEF_INT[i]);
@@ -281,7 +296,7 @@ TEST_CASE("settings_test_types_load_and_save") {
 
     pElement = settings->FirstChildElement(EXAMPLE_UINT.c_str());
     REQUIRE(pElement != nullptr);
-    unsigned int test_ui;
+    unsigned int test_ui = 0;
     error = pElement->QueryUnsignedText(&test_ui);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_ui == DEF_UINT[i]);
@@ -289,7 +304,7 @@ TEST_CASE("settings_test_types_load_and_save") {
 
     pElement = settings->FirstChildElement(EXAMPLE_FLOAT.c_str());
     REQUIRE(pElement != nullptr);
-    float test_f;
+    float test_f = 0.F;
     error = pElement->QueryFloatText(&test_f);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_f == Catch::Approx(DEF_FLOAT[i]).epsilon(TOLERANCE_FLOAT_APPROX));
@@ -297,7 +312,7 @@ TEST_CASE("settings_test_types_load_and_save") {
 
     pElement = settings->FirstChildElement(EXAMPLE_DOUBLE.c_str());
     REQUIRE(pElement != nullptr);
-    double test_d;
+    double test_d = 0.;
     error = pElement->QueryDoubleText(&test_d);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
     CHECK(test_d == Catch::Approx(DEF_DOUBLE[i]).epsilon(TOLERANCE_DOUBLE_APPROX));
@@ -305,12 +320,12 @@ TEST_CASE("settings_test_types_load_and_save") {
 
     pElement = settings->FirstChildElement(EXAMPLE_STRING.c_str());
     REQUIRE(pElement != nullptr);
-    std::string test_c;
+    std::string test_c = "";
     error = pElement->QueryStrText(&test_c);
     REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
-    CHECK(test_c.compare(DEF_STR[i]) == 0);
-    CHECK(es.exampleStr.compare(DEF_STR[i]) == 0);
-    CHECK(es.exampleWStr.compare(DEF_WSTR[i]) == 0);
+    CHECK(test_c == DEF_STR[i]);
+    CHECK(es.exampleStr == DEF_STR[i]);
+    CHECK(es.exampleWStr == DEF_WSTR[i]);
   }
 
   // 3. new class with same save file:
@@ -323,7 +338,7 @@ TEST_CASE("settings_test_types_load_and_save") {
   CHECK(es2.exampleUint == DEF_UINT[1]);
   CHECK(es2.exampleFloat == Catch::Approx(DEF_FLOAT[1]).epsilon(TOLERANCE_FLOAT_APPROX));
   CHECK(es2.exampleDouble == Catch::Approx(DEF_DOUBLE[1]).epsilon(TOLERANCE_DOUBLE_APPROX));
-  CHECK(es2.exampleStr.compare(DEF_STR[1]) == 0);
+  CHECK(es2.exampleStr == DEF_STR[1]);
 
   // 4. change a value in xml and load values in class, see if values get loaded
 
@@ -374,7 +389,7 @@ TEST_CASE("settings_test_types_load_and_save") {
   CHECK(es2.exampleUint == DEF_UINT[2]);
   CHECK(es2.exampleFloat == Catch::Approx(DEF_FLOAT[2]).epsilon(TOLERANCE_FLOAT_APPROX));
   CHECK(es2.exampleDouble == Catch::Approx(DEF_DOUBLE[2]).epsilon(TOLERANCE_DOUBLE_APPROX));
-  CHECK(es2.exampleStr.compare(DEF_STR[2]) == 0);
+  CHECK(es2.exampleStr == DEF_STR[2]);
 }
 
 TEST_CASE("settings_test_array") {
@@ -394,7 +409,7 @@ TEST_CASE("settings_test_array") {
 
   // 1. Test save 2. and load
 
-  for (int J = 0; J < 2; J++) {
+  for (int J = 0; J < 2; ++J) {
     esa.save();
     test::ExampleSettingsArray esa_load(SAVE_FILE);
 
@@ -420,7 +435,7 @@ TEST_CASE("settings_test_array") {
     tinyxml2::XMLElement* element_d = root->FirstChildElement(EXAMPLE_ARRAY_D.c_str());
     REQUIRE(element_d != nullptr);
 
-    for (size_t i = 0; i < NUM_VALS; i++) {
+    for (size_t i = 0; i < NUM_VALS; +i) {
       const std::string child_name = "_" + std::to_string(i);
       tinyxml2::XMLElement* child_b = element_b->FirstChildElement(child_name.c_str());
       REQUIRE(child_b != nullptr);
@@ -480,7 +495,7 @@ TEST_CASE("settings_test_array") {
       int i_rand_val  = (test_i * 7 - J) * 3;
       unsigned int ui_rand_val = test_ui + 4 * static_cast<unsigned int>(i) + 77;
       float f_rand_val =
-        (test_f + 5.0f * static_cast<float>(i) + static_cast<float>(J)) / 3.f;
+        (test_f + 5.0f * static_cast<float>(i) + static_cast<float>(J)) / 3.F;
       double d_rand_val = (test_d + static_cast<double>(i) + static_cast<double>(J)) / 3.;
 
       child_b->SetText(b_rand_val);
@@ -515,10 +530,10 @@ class ExampleSaneSettings : public SaneSettings {
   void initSettinngs() {
     // introduce all membervariables which shall be saved.
     const bool dont_throw_bad_parsing = true;
-    put<int>(&exampleInt, EXAMPLE_INT, dont_throw_bad_parsing, util::saneMinMax, MIN_I, MAX_I);
-    put<float>(&exampleFloat, EXAMPLE_FLOAT, dont_throw_bad_parsing, util::saneMinMax, MIN_F, MAX_F);
+    put<int>(&exampleInt, EXAMPLE_INT, dont_throw_bad_parsing, util::saneMinMax, RANGE_I);
+    put<float>(&exampleFloat, EXAMPLE_FLOAT, dont_throw_bad_parsing, util::saneMinMax, RANGE_F);
     put<double>(
-      &exampleDouble, EXAMPLE_DOUBLE, dont_throw_bad_parsing, util::saneMinMax, MIN_D, MAX_D);
+      &exampleDouble, EXAMPLE_DOUBLE, dont_throw_bad_parsing, util::saneMinMax, RANGE_D);
   }
 
   ~ExampleSaneSettings() {}
@@ -528,23 +543,20 @@ class ExampleSaneSettings : public SaneSettings {
   double exampleDouble;
 
   void setTooHigh() {
-    exampleInt    = MAX_I + 1;
-    exampleFloat  = MAX_F + 1.f;
+    exampleInt    = RANGE_I.getMax() + 1;
+    exampleFloat  = RANGE_F.getMax() + 1.F;
     exampleDouble = std::numeric_limits<double>::infinity();
   }
 
   void setTooLow() {
-    exampleInt    = MIN_I - 1;
-    exampleFloat  = MIN_F - 1.f;
+    exampleInt    = RANGE_I.getMin() - 1;
+    exampleFloat  = RANGE_F.getMin() - 1.F;
     exampleDouble = -1. * std::numeric_limits<double>::infinity();
   }
 
-  static constexpr int MAX_I    = 100;
-  static constexpr int MIN_I    = -10;
-  static constexpr float MAX_F  = 0.001f;
-  static constexpr float MIN_F  = 0.f;
-  static constexpr double MAX_D = std::numeric_limits<double>::max();
-  static constexpr double MIN_D = std::numeric_limits<double>::min();
+  static constexpr util::Range<int> RANGE_I{-10,100};
+  static constexpr util::Range<float> RANGE_F{0.001f,0.F};
+  static constexpr util::Range<double> RANGE_D{std::numeric_limits<double>::min(),std::numeric_limits<double>::max()};
 };
 
 }  // namespace test
@@ -567,30 +579,30 @@ TEST_CASE("settings_test_sanitizer_saving") {
 
   tinyxml2::XMLElement* pElement = settings->FirstChildElement(EXAMPLE_INT.c_str());
   REQUIRE(pElement != nullptr);
-  int test_i;
+  int test_i = 0;
 
   error = pElement->QueryIntText(&test_i);
   REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
-  CHECK(test_i == test::ExampleSaneSettings::MAX_I);
-  CHECK(es.exampleInt == test::ExampleSaneSettings::MAX_I);
+  CHECK(test_i == test::ExampleSaneSettings::RANGE_I.getMax());
+  CHECK(es.exampleInt == test::ExampleSaneSettings::RANGE_I.getMax());
 
   pElement = settings->FirstChildElement(EXAMPLE_FLOAT.c_str());
   REQUIRE(pElement != nullptr);
-  float test_f;
+  float test_f = 0.F;
   error = pElement->QueryFloatText(&test_f);
   REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
-  CHECK(test_f == Catch::Approx(test::ExampleSaneSettings::MAX_F).epsilon(TOLERANCE_FLOAT_APPROX));
+  CHECK(test_f == Catch::Approx(test::ExampleSaneSettings::RANGE_F.getMax()).epsilon(TOLERANCE_FLOAT_APPROX));
   CHECK(es.exampleFloat ==
-        Catch::Approx(test::ExampleSaneSettings::MAX_F).epsilon(TOLERANCE_FLOAT_APPROX));
+        Catch::Approx(test::ExampleSaneSettings::RANGE_F.getMax()).epsilon(TOLERANCE_FLOAT_APPROX));
 
   pElement = settings->FirstChildElement(EXAMPLE_DOUBLE.c_str());
   REQUIRE(pElement != nullptr);
-  double test_d;
+  double test_d = 0.;
   error = pElement->QueryDoubleText(&test_d);
   REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
-  CHECK(test_d == Catch::Approx(test::ExampleSaneSettings::MAX_D).epsilon(TOLERANCE_DOUBLE_APPROX));
+  CHECK(test_d == Catch::Approx(test::ExampleSaneSettings::RANGE_D.getMax()).epsilon(TOLERANCE_DOUBLE_APPROX));
   CHECK(es.exampleDouble ==
-        Catch::Approx(test::ExampleSaneSettings::MAX_D).epsilon(TOLERANCE_DOUBLE_APPROX));
+        Catch::Approx(test::ExampleSaneSettings::RANGE_D.getMax()).epsilon(TOLERANCE_DOUBLE_APPROX));
 
   es.setTooLow();
   es.save();
@@ -606,24 +618,24 @@ TEST_CASE("settings_test_sanitizer_saving") {
 
   error = pElement->QueryIntText(&test_i);
   REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
-  CHECK(test_i == test::ExampleSaneSettings::MIN_I);
-  CHECK(es.exampleInt == test::ExampleSaneSettings::MIN_I);
+  CHECK(test_i == test::ExampleSaneSettings::RANGE_I.getMin());
+  CHECK(es.exampleInt == test::ExampleSaneSettings::RANGE_I.getMin());
 
   pElement = settings->FirstChildElement(EXAMPLE_FLOAT.c_str());
   REQUIRE(pElement != nullptr);
   error = pElement->QueryFloatText(&test_f);
   REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
-  CHECK(test_f == Catch::Approx(test::ExampleSaneSettings::MIN_F).epsilon(TOLERANCE_FLOAT_APPROX));
+  CHECK(test_f == Catch::Approx(test::ExampleSaneSettings::RANGE_F.getMin()).epsilon(TOLERANCE_FLOAT_APPROX));
   CHECK(es.exampleFloat ==
-        Catch::Approx(test::ExampleSaneSettings::MIN_F).epsilon(TOLERANCE_FLOAT_APPROX));
+        Catch::Approx(test::ExampleSaneSettings::RANGE_F.getMin()).epsilon(TOLERANCE_FLOAT_APPROX));
 
   pElement = settings->FirstChildElement(EXAMPLE_DOUBLE.c_str());
   REQUIRE(pElement != nullptr);
   error = pElement->QueryDoubleText(&test_d);
   REQUIRE(error == tinyxml2::XMLError::XML_SUCCESS);
-  CHECK(test_d == Catch::Approx(test::ExampleSaneSettings::MIN_D).epsilon(TOLERANCE_DOUBLE_APPROX));
+  CHECK(test_d == Catch::Approx(test::ExampleSaneSettings::RANGE_D.getMin()).epsilon(TOLERANCE_DOUBLE_APPROX));
   CHECK(es.exampleDouble ==
-        Catch::Approx(test::ExampleSaneSettings::MIN_D).epsilon(TOLERANCE_DOUBLE_APPROX));
+        Catch::Approx(test::ExampleSaneSettings::RANGE_D.getMin()).epsilon(TOLERANCE_DOUBLE_APPROX));
 }
 
 TEST_CASE("settings_test_delete_move_file") {
@@ -687,13 +699,9 @@ TEST_CASE("settings_test_save_file_later") {
 namespace test {
 
 
-void saneVectorValues(std::vector<int>& var, int min, int max) {
+void saneVectorValues(std::vector<int>& var, util::Range<int> range) {
   for (auto& value : var) {
-    if (value > max) {
-      value = max;
-    } else if (value < min) {
-      value = min;
-    }
+    value = range.clamp(value);
   }
 }
 
@@ -701,15 +709,14 @@ using StlSettings =
   util::Settings<std::variant<std::vector<int>*, std::set<double>*, std::map<int, std::string>*, std::pair<int, std::string>*>>;
 class ExampleSettingsStlContainer : public StlSettings {
  public:
-  static constexpr int MAX_I = 100;
-  static constexpr int MIN_I = -10;
+  static constexpr util::Range<int>RANGE{100, -10};
 
   ExampleSettingsStlContainer(const std::string& source_file_name)
       : StlSettings(source_file_name) {
     // introduce all membervariables which shall be saved.
     const bool dont_throw_bad_parsing = true;
     put<std::vector<int>>(
-      &vector, EXAMPLE_VECTOR_I, dont_throw_bad_parsing, saneVectorValues, MIN_I, MAX_I);
+      &vector, EXAMPLE_VECTOR_I, dont_throw_bad_parsing, saneVectorValues, RANGE);
     put<std::set<double>>(&set, EXAMPLE_SET_D, dont_throw_bad_parsing);
     put<std::map<int, std::string>, 3>(
       arraysed_map.data(), EXAMPLE_ARRAYED_MAP, dont_throw_bad_parsing);
@@ -717,7 +724,7 @@ class ExampleSettingsStlContainer : public StlSettings {
       arraysed_pairs.data(), EXAMPLE_ARRAYED_PAIR, dont_throw_bad_parsing);
   }
 
-  ~ExampleSettingsStlContainer() {}
+  ~ExampleSettingsStlContainer() = default;
 
   std::vector<int> vector;
   std::set<double> set;
@@ -770,3 +777,8 @@ TEST_CASE("settings_test_stl_support_save") {
   REQUIRE(es2.arraysed_map == es.arraysed_map);
   REQUIRE(es2.arraysed_pairs == es.arraysed_pairs);
 }
+
+// NOLINTEND (readability-magic-numbers)
+// NOLINTEND (modernize-avoid-c-arrays)
+// NOLINTEND (readability-function-cognitive-complexity)
+// NOLINTEND (cppcoreguidelines-pro-bounds-constant-array-index)

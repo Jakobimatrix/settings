@@ -1,24 +1,36 @@
+/**
+ * @file example.cpp
+ * @brief Contains the entry point for the executable demonstarting the Settings class.
+ *
+ * @date 30.03.2025
+ * @author Jakob Wandel
+ * @version 1.0
+ **/
+
+#include <iostream>
 #include <locale>
+#include <cstddef>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include <settings/settings.hpp>
+#include <utils/types/range.hpp>
 
+// NOLINTBEGIN (readability-magic-numbers) these are random examples, not giving those names...
 
+namespace {
 // This function is used to sanitize a user input. The first input parameter
 // of every sanitizer function must be a reference to the variable in
 // question. Every additional parameter must be known at compiletime.
 template <class T>
-void saneMinMax(T& var, T min, T max) {
-  if (var > max) {
-    var = max;
-  } else if (var < min) {
-    var = min;
-  }
+void saneMinMax(T& var, util::Range<T> range) {
+  var = range.clamp(var);
 }
+}  // namespace
 
 using ExampleSettings =
-    util::Settings<std::variant<bool*, int*, float*, double*, std::string*, std::vector<unsigned>*>>;
+  util::Settings<std::variant<bool*, int*, float*, double*, std::string*, std::vector<unsigned>*>>;
 class ExampleClass : public ExampleSettings {
  public:
   ExampleClass(const std::string& source_file_name)
@@ -28,7 +40,11 @@ class ExampleClass : public ExampleSettings {
 
   ExampleClass() { initSettings(); }
 
-  ~ExampleClass() {}
+  ~ExampleClass()                              = default;
+  ExampleClass(const ExampleClass&)            = default;
+  ExampleClass(ExampleClass&&)                 = default;
+  ExampleClass& operator=(const ExampleClass&) = default;
+  ExampleClass& operator=(ExampleClass&&)      = default;
 
   void print() {
     std::cout << "------<ExampleClass>------\n"
@@ -37,8 +53,7 @@ class ExampleClass : public ExampleSettings {
               << F_STRING_ID << +": " << exampleFloat << "\n"
               << D_STRING_ID << +": " << exampleDouble << "\n"
               << S_STRING_ID << +": " << exampleString << "\n"
-              << ARRAY_ID << +": "
-              << "\n";
+              << ARRAY_ID << +": " << "\n";
     for (size_t i = 0; i < NUM_D_IN_ARRAY; ++i) {
       std::cout << "\t[" << i << "] " << std::to_string(example_array[i]) << "\n";
     }
@@ -71,7 +86,7 @@ class ExampleClass : public ExampleSettings {
     // which to sanitize from user input.
     // All other variables for this functions must be constants and
     // given in the correct order after the function.
-    put(&exampleInt, INT_STRNG_ID, dont_throw_bad_parsing, saneMinMax, MIN_I, MAX_I);
+    put(&exampleInt, INT_STRNG_ID, dont_throw_bad_parsing, saneMinMax, RANGE);
 
     // Tighly packed structures like arrays, and vectors can be saved
     // too. You only need to provide the first element and as the secondary
@@ -86,35 +101,34 @@ class ExampleClass : public ExampleSettings {
     put(&example_vector, VECTOR_ID, dont_throw_bad_parsing);
   }
 
-  bool exampleBool = true;
-  int exampleInt = 42;
-  float exampleFloat = 3.1415927f;
-  double exampleDouble = 3.1415926535897931;
+  bool exampleBool     = true;
+  int exampleInt       = 42;
+  float exampleFloat   = std::numbers::pi_v<float>;
+  double exampleDouble = std::numbers::pi_v<double>;
 
   std::string exampleString = "This is a string123$%&/()?=*ÄÜÖ";
 
-  static constexpr int NUM_D_IN_ARRAY = 3;
-  std::array<double, NUM_D_IN_ARRAY> example_array;
-  std::vector<unsigned> example_vector = {{3, 2, 6, 8}};
+  static constexpr int NUM_D_IN_ARRAY              = 3;
+  std::array<double, NUM_D_IN_ARRAY> example_array = {{0., 0., 0.}};
+  std::vector<unsigned> example_vector             = {{3, 2, 6, 8}};
 
-  static constexpr int MAX_I = 10;
-  static constexpr int MIN_I = 0;
+  static constexpr util::Range<int> RANGE{0, 10};
 
   // These must be unique
   // These names will be the identifiers in the xml.
   const std::string BOOL_STRNG_ID = "bool";
-  const std::string INT_STRNG_ID = "integer";
-  const std::string F_STRING_ID = "nearly_pi";
-  const std::string D_STRING_ID = "even_more_nearly_pi";
-  const std::string ARRAY_ID = "You_should_probably_choose_a_short_name";
-  const std::string S_STRING_ID = "string";
-  const std::string VECTOR_ID = "stlSupport";
+  const std::string INT_STRNG_ID  = "integer";
+  const std::string F_STRING_ID   = "nearly_pi";
+  const std::string D_STRING_ID   = "even_more_nearly_pi";
+  const std::string ARRAY_ID      = "You_should_probably_choose_a_short_name";
+  const std::string S_STRING_ID   = "string";
+  const std::string VECTOR_ID     = "stlSupport";
 };
 
 int main() {
 
   // make sure to always use the same decimal point separator
-  std::locale("C");
+  std::locale::global(std::locale("C"));
 
 
   const std::string file = "ExampleClass.xml";
@@ -126,11 +140,12 @@ int main() {
   // save the current values of all registered membervariables:
   exampleClass.save(file);
   std::cout
-      << "Now you could look at " << file << " and change some values. Press Enter when finnished.\n"
-      << "The integer value has an example sanitizer function, which will\n"
-      << "be triggered on every save() and reloadeAllFromFile().\n"
-      << "If you enter a value less than 0 or more than 10, the loaded\n"
-      << "value will be sanitized." << std::endl;
+    << "Now you could look at " << file << " and change some values. Press Enter when finnished.\n"
+    << "The integer value has an example sanitizer function, which will\n"
+    << "be triggered on every save() and reloadeAllFromFile().\n"
+    << "If you enter a value less than 0 or more than 10, the loaded\n"
+    << "value will be sanitized.\n"
+    << std::flush;
   std::getchar();
   // change something in the file and reload into class
   exampleClass.reloadAllFromFile();
@@ -141,5 +156,8 @@ int main() {
             << "the membervariables will be overwritten.\n"
             << "If you run the programm again, you will see\n"
             << "that previous changed values will be loaded\n"
-            << "instead of the default values." << std::endl;
+            << "instead of the default values.\n";
+  return 0;
 }
+
+// NOLINTEND (readability-magic-numbers)

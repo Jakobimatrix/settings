@@ -13,7 +13,7 @@ if(NOT DEFINED LIBRARY_LIB_VERSION)
 
     target_link_libraries(${LIB_NAME}_${LIBRARY_LIB_VERSION}
       INTERFACE
-      utils_lib_1.0.0
+      utils_lib_2.0.0
       tinyxml2
       ${ENVIRONMENT_SETTINGS}
     )
