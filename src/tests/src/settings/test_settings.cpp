@@ -435,7 +435,7 @@ TEST_CASE("settings_test_array") {
     tinyxml2::XMLElement* element_d = root->FirstChildElement(EXAMPLE_ARRAY_D.c_str());
     REQUIRE(element_d != nullptr);
 
-    for (size_t i = 0; i < NUM_VALS; +i) {
+    for (size_t i = 0; i < NUM_VALS; ++i) {
       const std::string child_name = "_" + std::to_string(i);
       tinyxml2::XMLElement* child_b = element_b->FirstChildElement(child_name.c_str());
       REQUIRE(child_b != nullptr);
